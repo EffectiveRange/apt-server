@@ -1,0 +1,15 @@
+Origin: {{origin}}
+Label: {{label}}
+Suite: stable
+Codename: stable
+Version: {{version}}
+Architectures: {{architectures}}
+Components: main
+Description: APT server with dynamic package pool handling
+Date: {{date}}
+MD5Sum:
+{{md5_checksums}}
+SHA1:
+{{sha1_checksums}}
+SHA256:
+{{sha256_checksums}}
