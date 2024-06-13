@@ -1,0 +1,22 @@
+version: '3'
+services:
+  apt-server-arm64: &apt-server
+    container_name: apt-server-arm64
+    build:
+      dockerfile: Dockerfile
+      args:
+        SERVER_ARCH: arm64v8
+        CLIENT_ARCH: armhf
+    stdin_open: true
+    tty: true
+    privileged: true
+    network_mode: host
+    volumes:
+      - /opt/debs:/opt/debs
+  apt-server-amd64:
+    <<: *apt-server
+    container_name: apt-server-amd64
+    build:
+      dockerfile: Dockerfile
+      args:
+        SERVER_ARCH: amd64

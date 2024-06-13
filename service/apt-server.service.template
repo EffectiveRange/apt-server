@@ -1,0 +1,18 @@
+[Unit]
+Description=APT Server Container
+After=docker.service
+Requires=docker.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker build /etc/apt-server --tag effectiverange/er-apt-server-${ARCH}:${TAG} --build-arg SERVER_ARCH=${DOCKER_ARCH} --build-arg CLIENT_ARCH=armhf
+ExecStart=/usr/bin/docker run --net=host --name=apt-server -v /opt/debs:/opt/debs -v /var/log/effective-range/apt-server:/var/log/effective-range/apt-server ferenj/gss-apt-server-${ARCH}:${TAG}
+ExecStop=/usr/bin/docker kill apt-server
+ExecStopPost=/usr/bin/docker rm apt-server
+
+[Install]
+WantedBy=multi-user.target
