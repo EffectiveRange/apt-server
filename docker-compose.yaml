@@ -5,8 +5,8 @@ services:
     build:
       dockerfile: Dockerfile
       args:
-        SERVER_ARCH: arm64v8
-        CLIENT_ARCH: armhf
+        DOCKER_ARCH: arm64v8
+        PACKAGE_ARCHS: armhf,arm64,amd64
     stdin_open: true
     tty: true
     privileged: true
@@ -19,4 +19,4 @@ services:
     build:
       dockerfile: Dockerfile
       args:
-        SERVER_ARCH: amd64
+        DOCKER_ARCH: amd64

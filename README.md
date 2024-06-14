@@ -54,27 +54,29 @@ apt install apt-server_1.0.0_all.deb
 
 ```commandline
 $ bin/apt-server.py --help
-usage: apt-server.py [-h] [--log-file LOG_FILE] [--log-level LOG_LEVEL] [-a ARCHITECTURES [ARCHITECTURES ...]] [-r REPOSITORY_DIR] [-d DEB_PACKAGE_DIR] [-t RELEASE_TEMPLATE] [-i SIGNING_KEY_ID] [-k SIGNING_KEY_PATH] [-p SIGNING_KEY_PASS] [-P PUBLIC_KEY_PATH] [--port PORT]
+usage: apt-server.py [-h] [-f LOG_FILE] [-l LOG_LEVEL] [-a ARCHITECTURES] [-r REPOSITORY_DIR] [-d DEB_PACKAGE_DIR] [-t RELEASE_TEMPLATE] [-i KEY_ID] [-k PRIVATE_KEY_PATH] [-p PRIVATE_KEY_PASS]
+                     [-P PUBLIC_KEY_PATH] [--port PORT]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --log-file LOG_FILE   log file path (default: /var/log/effective-range/apt-server/apt-server.log)
-  --log-level LOG_LEVEL
-                        logging level (default: None)
-  -a ARCHITECTURES [ARCHITECTURES ...], --architectures ARCHITECTURES [ARCHITECTURES ...]
-                        list of package architectures (default: ['amd64'])
+  -f LOG_FILE, --log-file LOG_FILE
+                        log file path (default: /var/log/effective-range/apt-server/apt-server.log)
+  -l LOG_LEVEL, --log-level LOG_LEVEL
+                        logging level (default: info)
+  -a ARCHITECTURES, --architectures ARCHITECTURES
+                        served package architectures (comma separated) (default: amd64)
   -r REPOSITORY_DIR, --repository-dir REPOSITORY_DIR
                         repository root directory (default: /etc/apt-repo)
   -d DEB_PACKAGE_DIR, --deb-package-dir DEB_PACKAGE_DIR
                         directory containing the debian packages (default: /opt/debs)
   -t RELEASE_TEMPLATE, --release-template RELEASE_TEMPLATE
                         release template file to use (default: templates/Release.template)
-  -i SIGNING_KEY_ID, --signing-key-id SIGNING_KEY_ID
-                        ID of key used for signing (default: C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3)
-  -k SIGNING_KEY_PATH, --signing-key-path SIGNING_KEY_PATH
+  -i KEY_ID, --key-id KEY_ID
+                        ID of key pair used for signing and verifying the signature (default: C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3)
+  -k PRIVATE_KEY_PATH, --private-key-path PRIVATE_KEY_PATH
                         path of key used for signing (default: tests/keys/private-key.asc)
-  -p SIGNING_KEY_PASS, --signing-key-pass SIGNING_KEY_PASS
-                        passphrase of key used for signing (default: admin123)
+  -p PRIVATE_KEY_PASS, --private-key-pass PRIVATE_KEY_PASS
+                        passphrase of key used for signing (default: test1234)
   -P PUBLIC_KEY_PATH, --public-key-path PUBLIC_KEY_PATH
                         path of key used for verification (default: tests/keys/public-key.asc)
   --port PORT           repository server port to listen on (default: 9000)
@@ -89,23 +91,22 @@ $ bin/apt-server.py -a armhf -t templates/Release.template -k tests/keys/private
 Output:
 
 ```commandline
-2024-03-08T10:24:53.723322Z [info     ] Started apt-server             [AptServerMain] app_version=1.1.1 application=apt-server arguments={'architectures': ['armhf'], 'repository_dir': '/etc/apt-repo', 'deb_package_dir': '/opt/debs', 'release_template': '/opt/venvs/apt-server/templates/Release.template', 'signing_key_id': 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3', 'signing_key_path': '/opt/venvs/apt-server/.gnupg/private-key.asc', 'signing_key_pass': 'admin123', 'public_key_path': '/opt/venvs/apt-server/.gnupg/public-key.asc', 'port': 9000} hostname=er-debian
-2024-03-08T10:24:53.725250Z [info     ] Creating initial repository    [AptServer] app_version=1.1.1 application=apt-server hostname=er-debian
-2024-03-08T10:24:53.726090Z [info     ] Creating pool directory        [AptRepository] app_version=1.1.1 application=apt-server directory=/etc/apt-repo/pool hostname=er-debian
-2024-03-08T10:24:53.726980Z [info     ] Creating .deb package directory [AptRepository] app_version=1.1.1 application=apt-server directory=/opt/debs hostname=er-debian
-2024-03-08T10:24:53.727728Z [info     ] Linked .deb package directory  [AptRepository] app_version=1.1.1 application=apt-server hostname=er-debian source=/opt/debs target=/etc/apt-repo/pool/main
-2024-03-08T10:24:53.761824Z [info     ] Generated Packages file        [AptRepository] app_version=1.1.1 application=apt-server architecture=all file=/etc/apt-repo/dists/stable/main/binary-all/Packages hostname=er-debian
-2024-03-08T10:24:53.796222Z [info     ] Generated Packages file        [AptRepository] app_version=1.1.1 application=apt-server architecture=armhf file=/etc/apt-repo/dists/stable/main/binary-armhf/Packages hostname=er-debian
-2024-03-08T10:24:53.799556Z [info     ] Generated Release file         [AptRepository] app_version=1.1.1 application=apt-server file=/etc/apt-repo/dists/stable/Release hostname=er-debian
-2024-03-08T10:24:53.800474Z [info     ] Signing repository             [AptRepository] app_version=1.1.1 application=apt-server hostname=er-debian
-2024-03-08T10:24:55.088156Z [info     ] Created signed Release file    [AptSigner] app_version=1.1.1 application=apt-server file=/etc/apt-repo/dists/stable/InRelease hostname=er-debian
-2024-03-08T10:24:55.448641Z [info     ] Created signature file         [AptSigner] app_version=1.1.1 application=apt-server file=/etc/apt-repo/dists/stable/Release.gpg hostname=er-debian
-2024-03-08T10:24:55.449915Z [info     ] Added public key file          [AptSigner] app_version=1.1.1 application=apt-server file=/etc/apt-repo/dists/stable/public.key hostname=er-debian
-2024-03-08T10:24:55.450723Z [info     ] Watching directory for .deb file changes [AptServer] app_version=1.1.1 application=apt-server directory=/opt/debs hostname=er-debian
-2024-03-08T10:24:55.451555Z [info     ] Starting component             [AptServer] app_version=1.1.1 application=apt-server component=file-observer hostname=er-debian
-2024-03-08T10:24:55.452823Z [info     ] Starting component             [AptServer] app_version=1.1.1 application=apt-server component=web-server hostname=er-debian
+2024-06-14T08:53:22.566892Z [info     ] Started apt-server             [AptServerApp] app_version=1.1.3 application=apt-server arguments={'log_file': '/var/log/effective-range/apt-server/apt-server.log', 'log_level': 'info', 'architecture': ['amd64'], 'repository_dir': '/etc/apt-repo', 'deb_package_dir': '/opt/debs', 'release_template': 'templates/Release.template', 'key_id': 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3', 'private_key_path': 'tests/keys/private-key.asc', 'private_key_pass': 'test1234', 'public_key_path': 'tests/keys/public-key.asc', 'port': 9000} hostname=Legion7iPro
+2024-06-14T08:53:22.619221Z [info     ] Creating initial repository    [AptServer] app_version=1.1.3 application=apt-server hostname=Legion7iPro
+2024-06-14T08:53:22.657566Z [info     ] Removing existing link         [AptRepository] app_version=1.1.3 application=apt-server hostname=Legion7iPro target=/etc/apt-repo/pool/main
+2024-06-14T08:53:22.696269Z [info     ] Linked .deb package directory  [AptRepository] app_version=1.1.3 application=apt-server hostname=Legion7iPro source=/opt/debs target=/etc/apt-repo/pool/main
+2024-06-14T08:53:22.791912Z [info     ] Generated Packages file        [AptRepository] app_version=1.1.3 application=apt-server architecture=all file=/etc/apt-repo/dists/stable/main/binary-all/Packages hostname=Legion7iPro
+2024-06-14T08:53:22.885608Z [info     ] Generated Packages file        [AptRepository] app_version=1.1.3 application=apt-server architecture=amd64 file=/etc/apt-repo/dists/stable/main/binary-amd64/Packages hostname=Legion7iPro
+2024-06-14T08:53:22.969732Z [info     ] Generated Release file         [AptRepository] app_version=1.1.3 application=apt-server file=/etc/apt-repo/dists/stable/Release hostname=Legion7iPro
+2024-06-14T08:53:23.000795Z [info     ] Signing initial repository     [AptServer] app_version=1.1.3 application=apt-server hostname=Legion7iPro
+2024-06-14T08:53:23.061975Z [info     ] Added public key file          [AptSigner] app_version=1.1.3 application=apt-server file=/etc/apt-repo/dists/stable/public.key hostname=Legion7iPro
+2024-06-14T08:53:23.554509Z [info     ] Created signed Release file    [AptSigner] app_version=1.1.3 application=apt-server file=/etc/apt-repo/dists/stable/InRelease hostname=Legion7iPro
+2024-06-14T08:53:24.038852Z [info     ] Created signature file         [AptSigner] app_version=1.1.3 application=apt-server file=/etc/apt-repo/dists/stable/Release.gpg hostname=Legion7iPro
+2024-06-14T08:53:24.081987Z [info     ] Watching directory for .deb file changes [AptServer] app_version=1.1.3 application=apt-server directory=/opt/debs hostname=Legion7iPro
+2024-06-14T08:53:24.130686Z [info     ] Starting component             [AptServer] app_version=1.1.3 application=apt-server component=file-observer hostname=Legion7iPro
+2024-06-14T08:53:24.173778Z [info     ] Starting component             [AptServer] app_version=1.1.3 application=apt-server component=web-server hostname=Legion7iPro
 ...
-2024-03-08T12:01:56.750346Z [info     ] Shutting down                  [AptServerMain] app_version=1.1.1 application=apt-server hostname=er-debian signum=2
+2024-06-14T08:54:10.480670Z [info     ] Shutting down                  [AptServerApp] app_version=1.1.3 application=apt-server hostname=Legion7iPro signum=2
 ```
 
 ## Accessing the repository
