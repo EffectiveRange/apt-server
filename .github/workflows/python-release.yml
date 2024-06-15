@@ -21,6 +21,7 @@ jobs:
       - name: Package and publish
         uses: EffectiveRange/python-package-github-action@v1
         with:
+          python-version: '3.11'
           debian-dist-type: 'application'
           debian-dist-command: 'make package'
       - name: Set up QEMU for multi-architecture builds
