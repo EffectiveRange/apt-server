@@ -8,4 +8,4 @@ override_dh_builddeb:
 	dh_builddeb $@ --destdir=$(ARTIFACTS_DIR) -- -Zgzip
 
 %:
-	dh $@ --with python-virtualenv --python $(which python3)
+	dh $@ --with python-virtualenv --python `which python3`
