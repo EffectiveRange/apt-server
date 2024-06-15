@@ -23,5 +23,23 @@ jobs:
         with:
           debian-dist-type: 'application'
           debian-dist-command: 'make package'
+      - name: Set up QEMU for multi-architecture builds
+        uses: docker/setup-qemu-action@v3
+      - name: Setup Docker buildx for multi-architecture builds
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME  }}
+          password: ${{ secrets.DOCKERHUB_TOKEN  }}
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: effectiverange/apt-server:latest
+          build-args: |
+            PACKAGE_ARCHS=armhf,arm64,amd64
       - name: Release
         uses: EffectiveRange/version-release-github-action@v1

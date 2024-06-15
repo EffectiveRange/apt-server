@@ -9,8 +9,8 @@ Type=simple
 Restart=always
 RestartSec=10
 TimeoutStartSec=0
-ExecStartPre=-/usr/bin/docker pull effectiverange/apt-server:${TAG}
-ExecStart=/usr/bin/docker run --net=host --name=apt-server -v /opt/debs:/opt/debs -v /var/log/effective-range/apt-server:/var/log/effective-range/apt-server effectiverange/apt-server:${TAG}
+ExecStartPre=-/usr/bin/docker pull effectiverange/apt-server:latest
+ExecStart=/usr/bin/docker run --net=host --name=apt-server -v /opt/debs:/opt/debs -v /var/log/effective-range/apt-server:/var/log/effective-range/apt-server effectiverange/apt-server:latest
 ExecStop=/usr/bin/docker kill apt-server
 ExecStopPost=/usr/bin/docker rm apt-server
 

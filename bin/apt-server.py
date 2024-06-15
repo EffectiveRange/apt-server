@@ -39,11 +39,13 @@ def main() -> None:
     public_key_path = _get_absolute_path(resource_root, arguments.public_key_path)
     release_template_path = _get_absolute_path(resource_root, arguments.release_template)
 
+    architectures = arguments.architectures.split(',')
+
     public_key = GpgKey(arguments.key_id, public_key_path)
     private_key = GpgKey(arguments.key_id, private_key_path, arguments.private_key_pass)
     apt_signer = ReleaseSigner(GPG(), public_key, private_key, repository_dir)
-    apt_repository = LinkedPoolAptRepository(APPLICATION_NAME, arguments.architectures, repository_dir,
-                                             deb_package_dir, release_template_path)
+    apt_repository = LinkedPoolAptRepository(
+        APPLICATION_NAME, architectures, repository_dir, deb_package_dir, release_template_path)
 
     handler_class = partial(SimpleHTTPRequestHandler, directory=repository_dir)
     web_server = HTTPServer(('', arguments.port), handler_class)
@@ -62,10 +64,10 @@ def main() -> None:
 
 def _get_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--log-file', help='log file path',
+    parser.add_argument('-f', '--log-file', help='log file path',
                         default='/var/log/effective-range/apt-server/apt-server.log')
-    parser.add_argument('--log-level', help='logging level', default='info')
-    parser.add_argument('-a', '--architectures', help='list of package architectures', nargs='+', default=['amd64'])
+    parser.add_argument('-l', '--log-level', help='logging level', default='info')
+    parser.add_argument('-a', '--architectures', help='served package architectures (comma separated)', default='amd64')
     parser.add_argument('-r', '--repository-dir', help='repository root directory', default='/etc/apt-repo')
     parser.add_argument('-d', '--deb-package-dir', help='directory containing the debian packages', default='/opt/debs')
     parser.add_argument('-t', '--release-template', help='release template file to use',

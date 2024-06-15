@@ -1,8 +1,4 @@
-ARG SERVER_ARCH=$SERVER_ARCH
-ARG IMAGE_REPO=${SERVER_ARCH}/debian
-ARG IMAGE_VER=bullseye-slim
-
-FROM ${IMAGE_REPO}:${IMAGE_VER}
+FROM debian:bullseye-slim
 
 RUN apt update && apt upgrade -y
 
@@ -10,12 +6,15 @@ RUN apt update && apt upgrade -y
 COPY dist/*.deb /etc/apt-server/
 RUN apt install -y /etc/apt-server/*.deb
 
-ARG CLIENT_ARCH=$CLIENT_ARCH
-ENV ARCHITECTURES=${CLIENT_ARCH}
+# Copy keys
+COPY tests/keys/* /etc/apt-server/keys/
+
+# Set package architectures
+ARG PACKAGE_ARCHS=$PACKAGE_ARCHS
+ENV ARCHITECTURES=${PACKAGE_ARCHS}
 
 # Start apt-server
 CMD /opt/venvs/apt-server/bin/python3 /opt/venvs/apt-server/bin/apt-server.py \
-     --architectures ${ARCHITECTURES}                                         \
-     --release-template /opt/venvs/apt-server/templates/Release.template      \
-     --signing-key-path /opt/venvs/apt-server/.gnupg/private-key.asc          \
-     --public-key-path /opt/venvs/apt-server/.gnupg/public-key.asc
+--port 80 --architectures ${ARCHITECTURES} \
+--private-key-path /etc/apt-server/keys/private-key.asc \
+--public-key-path /etc/apt-server/keys/public-key.asc
