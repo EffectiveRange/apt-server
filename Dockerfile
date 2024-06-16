@@ -7,6 +7,11 @@ COPY dist/*.deb /etc/apt-server/
 RUN apt install -y /etc/apt-server/*.deb
 ENV PATH="/opt/venvs/apt-server/bin:$PATH"
 
+# Create symbolic link of the lib directory with the actual python version
+RUN export SOURCE_VERSION=$(ls /opt/venvs/apt-server/lib/ | grep python | awk -Fpython '{print $2}') && \
+    export TARGET_VERSION=$(python3 --version | awk '{print $2}' | awk -F. '{print $1"."$2}') && \
+    ln -s /opt/venvs/apt-server/lib/python$SOURCE_VERSION /opt/venvs/apt-server/lib/python$TARGET_VERSION
+
 # Copy keys
 COPY tests/keys/* /etc/apt-server/keys/
 
