@@ -24,6 +24,7 @@ jobs:
           python-version: '3.11'
           debian-dist-type: 'application'
           debian-dist-command: 'make package'
+          post-build-command: 'make service TAG=$GIT_TAG'
       - name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v3
       - name: Setup Docker buildx for multi-architecture builds
