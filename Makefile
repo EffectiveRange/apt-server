@@ -18,4 +18,4 @@ image:
 	docker build $(ROOT_DIR) --file Dockerfile --tag effectiverange/apt-server$(:)$(TAG) --build-arg PACKAGE_ARCHS=$(PACKAGE_ARCHS)
 
 service:
-	@cat $(ROOT_DIR)/service/apt-server.docker.service | TAG=$(TAG) envsubst > $(ROOT_DIR)/dist/apt-server-$(TAG).docker.service
+	@cat $(ROOT_DIR)/service/apt-server.docker.service | TAG=$(TAG) envsubst > $(ROOT_DIR)/dist/apt-server-$(TAG:v%=%).docker.service
