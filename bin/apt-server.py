@@ -8,7 +8,7 @@ import argparse
 import os
 import signal
 from functools import partial
-from http.server import SimpleHTTPRequestHandler, HTTPServer
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
@@ -48,7 +48,7 @@ def main() -> None:
         APPLICATION_NAME, architectures, repository_dir, deb_package_dir, release_template_path)
 
     handler_class = partial(SimpleHTTPRequestHandler, directory=repository_dir)
-    web_server = HTTPServer(('', arguments.port), handler_class)
+    web_server = ThreadingHTTPServer(('', arguments.port), handler_class)
 
     apt_server = AptServer(apt_repository, apt_signer, Observer(), web_server, deb_package_dir)
 

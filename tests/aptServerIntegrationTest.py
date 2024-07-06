@@ -1,6 +1,6 @@
 import unittest
 from functools import partial
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer, HTTPServer
 from importlib.metadata import version
 from threading import Thread
 from unittest import TestCase
@@ -114,7 +114,7 @@ def create_components():
     apt_repository = LinkedPoolAptRepository(APPLICATION_NAME, [ARCHITECTURE], REPOSITORY_DIR,
                                              PACKAGE_DIR, TEMPLATE_PATH)
     handler_class = partial(SimpleHTTPRequestHandler, directory=REPOSITORY_DIR)
-    web_server = HTTPServer(('', 0), handler_class)
+    web_server = ThreadingHTTPServer(('', 0), handler_class)
 
     return apt_repository, apt_signer, web_server
 
