@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='apt-server',
-    version='1.1.4',
+    version='1.1.5',
     description='APT server with dynamic package pool handling',
     author='Ferenc Nandor Janky & Attila Gombos',
     author_email='info@effective-range.com',
