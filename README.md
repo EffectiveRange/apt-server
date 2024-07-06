@@ -1,12 +1,12 @@
 # apt-server
 
 APT server with dynamic package pool handling. Dynamic behavior is achieved by listening file changes in package pool
-directory and
-on any .deb file change, the repository is updated and re-signed.
+directory and on any .deb file change, the repository is updated and re-signed.
 
 ## Table of contents
 
 - [Features](#features)
+- [Requirements](#requirements)
 - [Installation](#installation)
     - [From source](#from-source)
     - [From GitHub release](#from-github-release)
@@ -22,9 +22,9 @@ on any .deb file change, the repository is updated and re-signed.
 
 ## Features
 
-- Dynamic package pool handling
-- Multiple architectures
-- GPG signed repository
+- [x] Dynamic package pool handling
+- [x] Multiple architectures
+- [x] GPG signed repository
 
 ## Requirements
 
@@ -116,7 +116,7 @@ Output:
    The repository can be accessed by adding it to a sources list file, eg:
 
     ```commandline
-    echo "deb [arch=armhf] http://127.0.0.1:9000 stable main" | tee /etc/apt/sources.list.d/effective-range.list
+    echo "deb http://127.0.0.1:9000 stable main" | tee /etc/apt/sources.list.d/effective-range.list
     ```
 
 2. Add the public key to the keychain
