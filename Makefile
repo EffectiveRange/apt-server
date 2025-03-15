@@ -1,7 +1,6 @@
 colon := :
 $(colon) := :
 TAG=latest
-PACKAGE_ARCHS=armhf,arm64,amd64
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 .PHONY: clean package image service
@@ -15,7 +14,7 @@ package:
 	rm dist/*.buildinfo dist/*.changes dist/*.dsc dist/*_*.tar.gz
 
 image:
-	docker build $(ROOT_DIR) --file Dockerfile --tag effectiverange/apt-server$(:)$(TAG) --build-arg PACKAGE_ARCHS=$(PACKAGE_ARCHS)
+	docker build $(ROOT_DIR) --file Dockerfile --tag effectiverange/apt-server$(:)$(TAG)
 
 service:
 	@cat $(ROOT_DIR)/service/apt-server.docker.service | TAG=$(TAG) envsubst > $(ROOT_DIR)/dist/apt-server-$(TAG:v%=%).docker.service

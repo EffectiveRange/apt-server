@@ -2,12 +2,12 @@ import unittest
 from unittest import TestCase, mock
 from unittest.mock import MagicMock
 
+from common_utility import delete_directory, create_file
 from context_logger import setup_logging
 from gnupg import GPG, Sign, Verify, ImportResult
 
 from apt_repository.aptSigner import ReleaseSigner, GpgKey, GpgException
-from tests import delete_directory, TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR, \
-    fill_template, create_file
+from tests import TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR, fill_template
 
 APPLICATION_NAME = 'apt-server'
 ARCHITECTURE = 'amd64'
@@ -41,11 +41,24 @@ class AptSignerTest(TestCase):
 
         # Then
         gpg.import_keys_file.assert_not_called()
-        gpg.sign_file.assert_has_calls([
-            mock.call(f'{RELEASE_DIR}/Release', keyid=KEY_ID, passphrase=PASSPHRASE,
-                      output=f'{RELEASE_DIR}/InRelease', detach=False),
-            mock.call(f'{RELEASE_DIR}/Release', keyid=KEY_ID, passphrase=PASSPHRASE,
-                      output=f'{RELEASE_DIR}/Release.gpg', detach=True)])
+        gpg.sign_file.assert_has_calls(
+            [
+                mock.call(
+                    f'{RELEASE_DIR}/Release',
+                    keyid=KEY_ID,
+                    passphrase=PASSPHRASE,
+                    output=f'{RELEASE_DIR}/InRelease',
+                    detach=False,
+                ),
+                mock.call(
+                    f'{RELEASE_DIR}/Release',
+                    keyid=KEY_ID,
+                    passphrase=PASSPHRASE,
+                    output=f'{RELEASE_DIR}/Release.gpg',
+                    detach=True,
+                ),
+            ]
+        )
         gpg.verify_file.assert_called()
 
     def test_sign_when_key_is_imported(self):
@@ -58,11 +71,24 @@ class AptSignerTest(TestCase):
 
         # Then
         gpg.import_keys_file.assert_called_once_with(PRIVATE_KEY_PATH)
-        gpg.sign_file.assert_has_calls([
-            mock.call(f'{RELEASE_DIR}/Release', keyid=KEY_ID, passphrase=PASSPHRASE,
-                      output=f'{RELEASE_DIR}/InRelease', detach=False),
-            mock.call(f'{RELEASE_DIR}/Release', keyid=KEY_ID, passphrase=PASSPHRASE,
-                      output=f'{RELEASE_DIR}/Release.gpg', detach=True)])
+        gpg.sign_file.assert_has_calls(
+            [
+                mock.call(
+                    f'{RELEASE_DIR}/Release',
+                    keyid=KEY_ID,
+                    passphrase=PASSPHRASE,
+                    output=f'{RELEASE_DIR}/InRelease',
+                    detach=False,
+                ),
+                mock.call(
+                    f'{RELEASE_DIR}/Release',
+                    keyid=KEY_ID,
+                    passphrase=PASSPHRASE,
+                    output=f'{RELEASE_DIR}/Release.gpg',
+                    detach=True,
+                ),
+            ]
+        )
         gpg.verify_file.assert_called()
 
     def test_exception_raised_when_fail_to_import_key(self):
@@ -166,11 +192,10 @@ def create_components(import_code=0, sign_codes=None, verify_codes=None):
 
 
 def create_files():
-    release = fill_template(TEMPLATE_PATH,
-                            {'origin': APPLICATION_NAME,
-                             'label': APPLICATION_NAME,
-                             'version': '1.1.3',
-                             'architectures': 'all amd64'})
+    release = fill_template(
+        TEMPLATE_PATH,
+        {'origin': APPLICATION_NAME, 'label': APPLICATION_NAME, 'version': '1.1.3', 'architectures': 'all amd64'},
+    )
 
     create_file(f'{REPOSITORY_DIR}/dists/stable/Release', release)
     create_file(f'{REPOSITORY_DIR}/dists/stable/InRelease', '')

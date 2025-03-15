@@ -8,7 +8,13 @@ setup(
     author_email='info@effective-range.com',
     packages=['apt_server', 'apt_repository'],
     scripts=['bin/apt-server.py'],
-    data_files=[('templates', ['templates/Release.template'])],
-    install_requires=['watchdog', 'jinja2', 'python-gnupg', 'requests',
-                      'python-context-logger@git+https://github.com/EffectiveRange/python-context-logger.git@latest']
+    data_files=[('config', ['config/apt-server.conf']), ('templates', ['templates/Release.template'])],
+    install_requires=[
+        'watchdog',
+        'jinja2',
+        'python-gnupg',
+        'requests',
+        'python-context-logger@git+https://github.com/EffectiveRange/python-context-logger.git@latest',
+        'python-common-utility@git+https://github.com/EffectiveRange/python-common-utility.git@latest',
+    ],
 )

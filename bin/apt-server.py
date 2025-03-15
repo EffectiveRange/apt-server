@@ -12,6 +12,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+from common_utility import ConfigLoader
 from context_logger import get_logger, setup_logging
 from gnupg import GPG
 from watchdog.observers import Observer
@@ -26,29 +27,46 @@ log = get_logger('AptServerApp')
 
 
 def main() -> None:
-    arguments = _get_argument_parser().parse_args()
+    resource_root = _get_resource_root()
+    arguments = _get_arguments()
 
-    setup_logging(APPLICATION_NAME, arguments.log_level, arguments.log_file)
+    setup_logging(APPLICATION_NAME)
 
-    log.info('Started apt-server', arguments=vars(arguments))
+    config = ConfigLoader(resource_root, f'/config/{APPLICATION_NAME}.conf').load(arguments)
+
+    _update_logging(config)
+
+    log.info(f'Started {APPLICATION_NAME}', arguments=config)
+
+    server_port = int(config.get('server_port', 9000))
+
+    architectures = {arch.strip() for arch in config['architectures'].split(',')}
+    distributions = {dist.strip() for dist in config['distributions'].split(',')}
+    repository_dir = config.get('repository_dir', '/etc/apt-repo')
+    deb_package_dir = config.get('deb_package_dir', '/opt/debs')
+    release_template = config.get('release_template', 'templates/Release.template')
+
+    private_key_id = config.get('private_key_id', 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3')
+    private_key_path = config.get('private_key_path', 'tests/keys/private-key.asc')
+    private_key_pass = config.get('private_key_pass', 'test1234')
+    public_key_path = config.get('public_key_path', 'tests/keys/public-key.asc')
 
     resource_root = _get_resource_root()
-    repository_dir = _get_absolute_path(resource_root, arguments.repository_dir)
-    deb_package_dir = _get_absolute_path(resource_root, arguments.deb_package_dir)
-    private_key_path = _get_absolute_path(resource_root, arguments.private_key_path)
-    public_key_path = _get_absolute_path(resource_root, arguments.public_key_path)
-    release_template_path = _get_absolute_path(resource_root, arguments.release_template)
+    repository_dir = _get_absolute_path(resource_root, repository_dir)
+    deb_package_dir = _get_absolute_path(resource_root, deb_package_dir)
+    private_key_path = _get_absolute_path(resource_root, private_key_path)
+    public_key_path = _get_absolute_path(resource_root, public_key_path)
+    release_template_path = _get_absolute_path(resource_root, release_template)
 
-    architectures = arguments.architectures.split(',')
-
-    public_key = GpgKey(arguments.key_id, public_key_path)
-    private_key = GpgKey(arguments.key_id, private_key_path, arguments.private_key_pass)
+    public_key = GpgKey(private_key_id, public_key_path)
+    private_key = GpgKey(private_key_id, private_key_path, private_key_pass)
     apt_signer = ReleaseSigner(GPG(), public_key, private_key, repository_dir)
     apt_repository = LinkedPoolAptRepository(
-        APPLICATION_NAME, architectures, repository_dir, deb_package_dir, release_template_path)
+        APPLICATION_NAME, architectures, distributions, repository_dir, deb_package_dir, release_template_path
+    )
 
     handler_class = partial(SimpleHTTPRequestHandler, directory=repository_dir)
-    web_server = ThreadingHTTPServer(('', arguments.port), handler_class)
+    web_server = ThreadingHTTPServer(('', server_port), handler_class)
 
     apt_server = AptServer(apt_repository, apt_signer, Observer(), web_server, deb_package_dir)
 
@@ -62,26 +80,32 @@ def main() -> None:
     apt_server.run()
 
 
-def _get_argument_parser() -> argparse.ArgumentParser:
+def _get_arguments() -> dict[str, Any]:
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-f', '--log-file', help='log file path',
-                        default='/var/log/effective-range/apt-server/apt-server.log')
-    parser.add_argument('-l', '--log-level', help='logging level', default='info')
-    parser.add_argument('-a', '--architectures', help='served package architectures (comma separated)', default='amd64')
-    parser.add_argument('-r', '--repository-dir', help='repository root directory', default='/etc/apt-repo')
-    parser.add_argument('-d', '--deb-package-dir', help='directory containing the debian packages', default='/opt/debs')
-    parser.add_argument('-t', '--release-template', help='release template file to use',
-                        default='templates/Release.template')
-    parser.add_argument('-i', '--key-id', help='ID of key pair used for signing and verifying the signature',
-                        default='C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3')
-    parser.add_argument('-k', '--private-key-path', help='path of key used for signing',
-                        default='tests/keys/private-key.asc')
-    parser.add_argument('-p', '--private-key-pass', help='passphrase of key used for signing',
-                        default='test1234')
-    parser.add_argument('-P', '--public-key-path', help='path of key used for verification',
-                        default='tests/keys/public-key.asc')
-    parser.add_argument('--port', help='repository server port to listen on', default=9000, type=int)
-    return parser
+    parser.add_argument(
+        '-c',
+        '--config-file',
+        help='configuration file',
+        default=f'/etc/effective-range/{APPLICATION_NAME}/{APPLICATION_NAME}.conf',
+    )
+
+    parser.add_argument('-f', '--log-file', help='log file path')
+    parser.add_argument('-l', '--log-level', help='logging level')
+
+    parser.add_argument('--server-port', help='repository server port to listen on', default=9000, type=int)
+
+    parser.add_argument('--architectures', help='served package architectures (comma separated)')
+    parser.add_argument('--distributions', help='supported distributions (comma separated)')
+    parser.add_argument('--repository-dir', help='repository root directory')
+    parser.add_argument('--deb-package-dir', help='directory containing the debian packages')
+    parser.add_argument('--release-template', help='release template file to use')
+
+    parser.add_argument('--private-key-id', help='ID of keys used for signing and verifying the signature')
+    parser.add_argument('--private-key-path', help='path of key used for signing')
+    parser.add_argument('--private-key-pass', help='passphrase of key used for signing')
+    parser.add_argument('--public-key-path', help='path of key used for verification')
+
+    return {k: v for k, v in vars(parser.parse_args()).items() if v is not None}
 
 
 def _get_resource_root() -> str:
@@ -93,6 +117,12 @@ def _get_absolute_path(resource_root: str, path: str) -> str:
         return path
     else:
         return f'{resource_root}/{path}'
+
+
+def _update_logging(configuration: dict[str, Any]) -> None:
+    log_level = configuration.get('log_level', 'INFO')
+    log_file = configuration.get('log_file')
+    setup_logging(APPLICATION_NAME, log_level, log_file, warn_on_overwrite=False)
 
 
 if __name__ == '__main__':

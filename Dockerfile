@@ -15,11 +15,7 @@ RUN export SOURCE_VERSION=$(ls /opt/venvs/apt-server/lib/ | grep python | awk -F
 # Copy keys
 COPY tests/keys/* /etc/apt-server/keys/
 
-# Set package architectures
-ARG PACKAGE_ARCHS=$PACKAGE_ARCHS
-ENV ARCHITECTURES=${PACKAGE_ARCHS}
-
 # Start apt-server
-CMD apt-server.py --port 80 --architectures ${ARCHITECTURES} \
+CMD apt-server.py --server-port 80 \
 --private-key-path /etc/apt-server/keys/private-key.asc \
 --public-key-path /etc/apt-server/keys/public-key.asc
