@@ -49,9 +49,16 @@ class LinkedPoolAptRepository(AptRepository):
             self._link_package_dir(pool_dir)
             self._initial_run = False
 
-        packages_files = self._generate_packages_files()
+        current_dir = os.getcwd()
 
-        self._generate_release_file(packages_files)
+        os.chdir(self._repository_dir)
+
+        for distribution in self._distributions:
+            packages_files = self._generate_packages_files(distribution)
+
+            self._generate_release_file(distribution, packages_files)
+
+        os.chdir(current_dir)
 
     def _create_pool_dir(self) -> str:
         pool_dir = f'{self._repository_dir}/pool'
@@ -87,83 +94,75 @@ class LinkedPoolAptRepository(AptRepository):
         else:
             os.remove(target_link)
 
-    def _generate_packages_files(self) -> list[str]:
+    def _generate_packages_files(self, distribution: str) -> list[str]:
         packages_files = []
 
-        current_dir = os.getcwd()
+        target_dir = os.path.abspath(f'{self._repository_dir}/dists/{distribution}/main')
 
-        os.chdir(self._repository_dir)
+        create_directory(target_dir)
 
-        for distribution in self._distributions:
-            target_dir = os.path.abspath(f'{self._repository_dir}/dists/{distribution}/main')
+        package_dir = f'pool/main/{distribution}/'
 
-            create_directory(target_dir)
+        create_directory(package_dir)
 
-            package_dir = f'pool/main/{distribution}/'
+        for arch in self._architectures:
+            arch_dir = f'{target_dir}/binary-{arch}'
 
-            create_directory(package_dir)
+            create_directory(arch_dir)
 
-            for arch in self._architectures:
-                arch_dir = f'{target_dir}/binary-{arch}'
+            packages_file = f'{arch_dir}/Packages'
 
-                create_directory(arch_dir)
+            with open(packages_file, 'w') as f:
+                subprocess.call(['dpkg-scanpackages', '--multiversion', '--arch', arch, package_dir], stdout=f)
 
-                packages_file = f'{arch_dir}/Packages'
+            packages_files.append(packages_file)
 
-                with open(packages_file, 'w') as f:
-                    subprocess.call(['dpkg-scanpackages', '--multiversion', '--arch', arch, package_dir], stdout=f)
+            log.info('Generated Packages file', distribution=distribution, architecture=arch, file=packages_file)
 
-                packages_files.append(packages_file)
+            compressed_file = f'{packages_file}.gz'
 
-                log.info('Generated Packages file', distribution=distribution, architecture=arch, file=packages_file)
+            with open(packages_file, 'rb') as f_in, gzip.open(compressed_file, 'wb') as f_out:
+                f_out.writelines(f_in)
 
-                compressed_file = f'{packages_file}.gz'
-
-                with open(packages_file, 'rb') as f_in, gzip.open(compressed_file, 'wb') as f_out:
-                    f_out.writelines(f_in)
-
-                packages_files.append(compressed_file)
-
-        os.chdir(current_dir)
+            packages_files.append(compressed_file)
 
         return packages_files
 
-    def _generate_release_file(self, packages_files: list[str]) -> None:
-        for distribution in self._distributions:
-            dist_path = os.path.abspath(f'{self._repository_dir}/dists/{distribution}')
+    def _generate_release_file(self, distribution: str, packages_files: list[str]) -> None:
+        dist_path = os.path.abspath(f'{self._repository_dir}/dists/{distribution}')
 
-            md5_checksums = []
-            sha1_checksums = []
-            sha256_checksums = []
+        md5_checksums = []
+        sha1_checksums = []
+        sha256_checksums = []
 
-            for packages_file in packages_files:
-                md5, sha1, sha256 = self._generate_checksums(packages_file)
-                file_size = os.stat(packages_file).st_size
-                file_path = packages_file[len(dist_path) + 1:]
-                md5_checksums.append(f' {md5} {file_size} {file_path}')
-                sha1_checksums.append(f' {sha1} {file_size} {file_path}')
-                sha256_checksums.append(f' {sha256} {file_size} {file_path}')
+        for packages_file in packages_files:
+            md5, sha1, sha256 = self._generate_checksums(packages_file)
+            file_size = os.stat(packages_file).st_size
+            file_path = packages_file[len(dist_path) + 1:]
+            md5_checksums.append(f' {md5} {file_size} {file_path}')
+            sha1_checksums.append(f' {sha1} {file_size} {file_path}')
+            sha256_checksums.append(f' {sha256} {file_size} {file_path}')
 
-            context = {
-                'origin': self._application_name,
-                'label': self._application_name,
-                'codename': distribution,
-                'version': self._get_version(),
-                'architectures': ' '.join(self._architectures),
-                'date': datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S UTC"),
-                'md5_checksums': '\n'.join(md5_checksums),
-                'sha1_checksums': '\n'.join(sha1_checksums),
-                'sha256_checksums': '\n'.join(sha256_checksums),
-            }
+        context = {
+            'origin': self._application_name,
+            'label': self._application_name,
+            'codename': distribution,
+            'version': self._get_version(),
+            'architectures': ' '.join(self._architectures),
+            'date': datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S UTC"),
+            'md5_checksums': '\n'.join(md5_checksums),
+            'sha1_checksums': '\n'.join(sha1_checksums),
+            'sha256_checksums': '\n'.join(sha256_checksums),
+        }
 
-            rendered_content = self._render_release_template(self._template_path, context)
+        rendered_content = self._render_release_template(self._template_path, context)
 
-            release_path = f'{dist_path}/Release'
+        release_path = f'{dist_path}/Release'
 
-            with open(release_path, 'w') as release_file:
-                release_file.write(rendered_content)
+        with open(release_path, 'w') as release_file:
+            release_file.write(rendered_content)
 
-            log.info('Generated Release file', distribution=distribution, file=release_path)
+        log.info('Generated Release file', distribution=distribution, file=release_path)
 
     def _get_version(self) -> str:
         try:
