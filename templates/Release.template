@@ -1,7 +1,7 @@
 Origin: {{origin}}
 Label: {{label}}
 Suite: stable
-Codename: stable
+Codename: {{codename}}
 Version: {{version}}
 Architectures: {{architectures}}
 Components: main

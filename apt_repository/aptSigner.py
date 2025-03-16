@@ -38,28 +38,33 @@ class AptSigner(object):
 
 class ReleaseSigner(AptSigner):
 
-    def __init__(self, gpg: GPG, public_key: GpgKey, private_key: GpgKey, repository_dir: str) -> None:
+    def __init__(
+            self, gpg: GPG, public_key: GpgKey, private_key: GpgKey, repository_dir: str, distributions: set[str]
+    ) -> None:
         self._repository_dir = repository_dir
+        self._distributions = distributions
         self._public_key = public_key
         self._private_key = private_key
         self._gpg = gpg
         self._initial_run = True
 
     def sign(self) -> None:
-        dist_path = os.path.abspath(f'{self._repository_dir}/dists/stable')
+        for distribution in self._distributions:
+            dist_path = os.path.abspath(f'{self._repository_dir}/dists/{distribution}')
 
-        if self._initial_run:
-            self._add_public_key(dist_path)
-            self._import_private_key()
-            self._initial_run = False
+            if self._initial_run:
+                self._add_public_key(dist_path)
+                self._import_private_key()
 
-        release_path = f'{dist_path}/Release'
+            release_path = f'{dist_path}/Release'
 
-        self._update_release_file(release_path)
+            self._update_release_file(release_path)
 
-        self._clearsign_release_file(dist_path, release_path)
+            self._clearsign_release_file(dist_path, release_path)
 
-        self._create_detached_signature(release_path)
+            self._create_detached_signature(release_path)
+
+        self._initial_run = False
 
     def _update_release_file(self, release_path: str) -> None:
         sign_with = 'SignWith'
@@ -122,11 +127,13 @@ class ReleaseSigner(AptSigner):
         log.info('Created signature file', file=signature_path)
 
     def _create_signature(self, release_path: str, signature_path: str, detach: bool) -> None:
-        result: Sign = self._gpg.sign_file(release_path,
-                                           keyid=self._private_key.id,
-                                           passphrase=self._private_key.passphrase,
-                                           output=signature_path,
-                                           detach=detach)
+        result: Sign = self._gpg.sign_file(
+            release_path,
+            keyid=self._private_key.id,
+            passphrase=self._private_key.passphrase,
+            output=signature_path,
+            detach=detach,
+        )
 
         if result.returncode != 0:
             log.error('Failed to create signature', file=release_path, signature=signature_path)

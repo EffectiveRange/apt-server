@@ -18,8 +18,14 @@ log = get_logger('AptServer')
 
 class AptServer(FileSystemEventHandler):
 
-    def __init__(self, apt_repository: AptRepository, apt_signer: AptSigner, observer: BaseObserver,
-                 web_server: HTTPServer, deb_package_dir: str) -> None:
+    def __init__(
+        self,
+        apt_repository: AptRepository,
+        apt_signer: AptSigner,
+        observer: BaseObserver,
+        web_server: HTTPServer,
+        deb_package_dir: str,
+    ) -> None:
         self._apt_repository = apt_repository
         self._apt_signer = apt_signer
         self._observer = observer
@@ -40,7 +46,7 @@ class AptServer(FileSystemEventHandler):
         self._sign_repository()
 
         log.info('Watching directory for .deb file changes', directory=self._deb_package_dir)
-        self._observer.schedule(self, self._deb_package_dir)
+        self._observer.schedule(self, self._deb_package_dir, recursive=True)
 
         log.info('Starting component', component='file-observer')
         self._observer.start()
@@ -62,7 +68,7 @@ class AptServer(FileSystemEventHandler):
         self._on_changed(event)
 
     def _on_changed(self, event: FileSystemEvent) -> None:
-        if event.src_path.endswith('.deb'):
+        if str(event.src_path).endswith('.deb'):
             log.info('File change event, recreating repository', event_type=event.event_type, file=event.src_path)
             self._apt_repository.create()
             self._sign_repository()
@@ -73,5 +79,10 @@ class AptServer(FileSystemEventHandler):
         try:
             self._apt_signer.sign()
         except GpgException as exception:
-            log.error('Error signing repository', operation=exception.operation, code=exception.code,
-                      status=exception.status, error=exception.error)
+            log.error(
+                'Error signing repository',
+                operation=exception.operation,
+                code=exception.code,
+                status=exception.status,
+                error=exception.error,
+            )

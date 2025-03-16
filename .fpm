@@ -1,0 +1,7 @@
+-s python
+-t deb
+--package dist
+--force
+--log warn
+--python-bin python3
+--python-package-name-prefix python3

@@ -32,7 +32,7 @@ class AptServerTest(TestCase):
             # Then
             apt_repository.create.assert_called_once()
             apt_signer.sign.assert_called_once()
-            observer.schedule.assert_called_once_with(apt_server, deb_package_dir)
+            observer.schedule.assert_called_once_with(apt_server, deb_package_dir, recursive=True)
             observer.start.assert_called_once()
             web_server.serve_forever.assert_called_once()
 
