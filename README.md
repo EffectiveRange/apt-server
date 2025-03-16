@@ -5,11 +5,11 @@
 | Name                             |    Stmts |     Miss |   Branch |   BrPart |   Cover |   Missing |
 |--------------------------------- | -------: | -------: | -------: | -------: | ------: | --------: |
 | apt\_repository/\_\_init\_\_.py  |        2 |        0 |        0 |        0 |    100% |           |
-| apt\_repository/aptRepository.py |      114 |        5 |       20 |        2 |     93% |47->52, 85-88, 171-172 |
+| apt\_repository/aptRepository.py |      113 |        5 |       18 |        2 |     93% |47->52, 92-95, 170-171 |
 | apt\_repository/aptSigner.py     |       92 |        0 |       18 |        0 |    100% |           |
 | apt\_server/\_\_init\_\_.py      |        1 |        0 |        0 |        0 |    100% |           |
 | apt\_server/aptServer.py         |       51 |        2 |        2 |        0 |     96% |     81-82 |
-|                        **TOTAL** |  **260** |    **7** |   **40** |    **2** | **96%** |           |
+|                        **TOTAL** |  **259** |    **7** |   **38** |    **2** | **96%** |           |
 
 
 ## Setup coverage badge
