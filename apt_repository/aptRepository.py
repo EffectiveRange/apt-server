@@ -11,6 +11,7 @@ from datetime import datetime
 from importlib.metadata import PackageNotFoundError, version
 from typing import Tuple
 
+from common_utility import create_directory
 from context_logger import get_logger
 from jinja2 import Environment, FileSystemLoader
 
@@ -26,17 +27,17 @@ class AptRepository(object):
 class LinkedPoolAptRepository(AptRepository):
 
     def __init__(
-        self,
-        application_name: str,
-        architectures: set[str],
-        distributions: set[str],
-        repository_dir: str,
-        deb_package_dir: str,
-        template_path: str,
+            self,
+            application_name: str,
+            architectures: set[str],
+            distributions: set[str],
+            repository_dir: str,
+            deb_package_dir: str,
+            template_path: str,
     ) -> None:
         self._application_name = application_name
         self._architectures = sorted({'all'} | architectures)
-        self._distributions = distributions if distributions else ['stable']
+        self._distributions = distributions
         self._repository_dir = repository_dir
         self._deb_package_dir = os.path.abspath(deb_package_dir)
         self._template_path = os.path.abspath(template_path)
@@ -96,16 +97,21 @@ class LinkedPoolAptRepository(AptRepository):
         for distribution in self._distributions:
             target_dir = os.path.abspath(f'{self._repository_dir}/dists/{distribution}/main')
 
+            create_directory(target_dir)
+
+            package_dir = f'pool/main/{distribution}/'
+
+            create_directory(package_dir)
+
             for arch in self._architectures:
                 arch_dir = f'{target_dir}/binary-{arch}'
 
-                if not os.path.isdir(arch_dir):
-                    os.makedirs(arch_dir)
+                create_directory(arch_dir)
 
                 packages_file = f'{arch_dir}/Packages'
 
                 with open(packages_file, 'w') as f:
-                    subprocess.call(['dpkg-scanpackages', '--arch', arch, f'pool/main/{distribution}/'], stdout=f)
+                    subprocess.call(['dpkg-scanpackages', '--multiversion', '--arch', arch, package_dir], stdout=f)
 
                 packages_files.append(packages_file)
 
@@ -133,7 +139,7 @@ class LinkedPoolAptRepository(AptRepository):
             for packages_file in packages_files:
                 md5, sha1, sha256 = self._generate_checksums(packages_file)
                 file_size = os.stat(packages_file).st_size
-                file_path = packages_file[len(dist_path) + 1 :]
+                file_path = packages_file[len(dist_path) + 1:]
                 md5_checksums.append(f' {md5} {file_size} {file_path}')
                 sha1_checksums.append(f' {sha1} {file_size} {file_path}')
                 sha256_checksums.append(f' {sha256} {file_size} {file_path}')

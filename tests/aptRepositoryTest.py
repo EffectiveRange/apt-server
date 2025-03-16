@@ -28,18 +28,18 @@ class AptRepositoryTest(TestCase):
     @classmethod
     def setUpClass(cls):
         setup_logging(APPLICATION_NAME, 'DEBUG', warn_on_overwrite=False)
-        delete_directory(PACKAGE_DIR)
-        create_test_packages(PACKAGE_DIR, DISTRIBUTION)
 
     def setUp(self):
         print()
+        delete_directory(PACKAGE_DIR)
+        create_test_packages(PACKAGE_DIR, DISTRIBUTION)
 
     def test_repository_tree_created_when_missing(self):
         # Given
         delete_directory(REPOSITORY_DIR)
 
         repository = LinkedPoolAptRepository(
-            APPLICATION_NAME, {ARCHITECTURE}, set(), REPOSITORY_DIR, PACKAGE_DIR, TEMPLATE_PATH
+            APPLICATION_NAME, {ARCHITECTURE}, {DISTRIBUTION}, REPOSITORY_DIR, PACKAGE_DIR, TEMPLATE_PATH
         )
 
         # When
@@ -56,7 +56,7 @@ class AptRepositoryTest(TestCase):
         delete_directory(PACKAGE_DIR)
 
         repository = LinkedPoolAptRepository(
-            APPLICATION_NAME, {ARCHITECTURE}, set(), REPOSITORY_DIR, PACKAGE_DIR, TEMPLATE_PATH
+            APPLICATION_NAME, {ARCHITECTURE}, {DISTRIBUTION}, REPOSITORY_DIR, PACKAGE_DIR, TEMPLATE_PATH
         )
 
         # When
@@ -68,8 +68,6 @@ class AptRepositoryTest(TestCase):
         self.assertTrue(os.path.isdir(f'{REPOSITORY_DIR}/dists/stable/main/binary-all'))
         self.assertTrue(os.path.isdir(f'{REPOSITORY_DIR}/dists/stable/main/binary-{ARCHITECTURE}'))
 
-        create_test_packages(PACKAGE_DIR, DISTRIBUTION)
-
     def test_packages_files_generated(self):
         # Given
         expected_packages = fill_template(
@@ -78,7 +76,7 @@ class AptRepositoryTest(TestCase):
         ).splitlines()
 
         repository = LinkedPoolAptRepository(
-            APPLICATION_NAME, {'amd64'}, set(), REPOSITORY_DIR, PACKAGE_DIR, TEMPLATE_PATH
+            APPLICATION_NAME, {'amd64'}, {DISTRIBUTION}, REPOSITORY_DIR, PACKAGE_DIR, TEMPLATE_PATH
         )
 
         # When
@@ -158,7 +156,7 @@ class AptRepositoryTest(TestCase):
         ).splitlines()
 
         repository = LinkedPoolAptRepository(
-            APPLICATION_NAME, {ARCHITECTURE}, set(), REPOSITORY_DIR, PACKAGE_DIR, TEMPLATE_PATH
+            APPLICATION_NAME, {ARCHITECTURE}, {DISTRIBUTION}, REPOSITORY_DIR, PACKAGE_DIR, TEMPLATE_PATH
         )
 
         # When
@@ -177,6 +175,10 @@ class AptRepositoryTest(TestCase):
 
     def test_release_files_generated_when_multiple_distributions(self):
         # Given
+        delete_directory(PACKAGE_DIR)
+        create_test_packages(PACKAGE_DIR, 'bullseye')
+        create_test_packages(PACKAGE_DIR, 'bookworm')
+
         expected_release_bullseye = fill_template(
             f'{RESOURCE_ROOT}/templates/Release.template',
             {
@@ -199,7 +201,7 @@ class AptRepositoryTest(TestCase):
         ).splitlines()
 
         repository = LinkedPoolAptRepository(
-            APPLICATION_NAME, {ARCHITECTURE}, set(), REPOSITORY_DIR, PACKAGE_DIR, TEMPLATE_PATH
+            APPLICATION_NAME, {ARCHITECTURE}, {'bullseye', 'bookworm'}, REPOSITORY_DIR, PACKAGE_DIR, TEMPLATE_PATH
         )
 
         # When

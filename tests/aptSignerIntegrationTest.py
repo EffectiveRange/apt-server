@@ -37,7 +37,7 @@ class AptSignerIntegrationTest(TestCase):
     def test_release_file_signed(self):
         # Given
         gpg, public_key, private_key = create_components()
-        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR)
+        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR, {DISTRIBUTION})
 
         LinkedPoolAptRepository(
             APPLICATION_NAME, {ARCHITECTURE}, {DISTRIBUTION}, REPOSITORY_DIR, PACKAGE_DIR, TEMPLATE_PATH
@@ -70,7 +70,7 @@ class AptSignerIntegrationTest(TestCase):
     def test_release_file_resigned(self):
         # Given
         gpg, public_key, private_key = create_components()
-        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR)
+        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR, {DISTRIBUTION})
 
         LinkedPoolAptRepository(
             APPLICATION_NAME, {ARCHITECTURE}, {DISTRIBUTION}, REPOSITORY_DIR, PACKAGE_DIR, TEMPLATE_PATH

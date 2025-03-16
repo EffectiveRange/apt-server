@@ -32,7 +32,7 @@ def main() -> None:
 
     setup_logging(APPLICATION_NAME)
 
-    config = ConfigLoader(resource_root, f'/config/{APPLICATION_NAME}.conf').load(arguments)
+    config = ConfigLoader(resource_root, f'config/{APPLICATION_NAME}.conf').load(arguments)
 
     _update_logging(config)
 
@@ -41,7 +41,7 @@ def main() -> None:
     server_port = int(config.get('server_port', 9000))
 
     architectures = {arch.strip() for arch in config['architectures'].split(',')}
-    distributions = {dist.strip() for dist in config['distributions'].split(',')}
+    distributions = {dist.strip() for dist in config.get('distributions', 'stable').split(',')}
     repository_dir = config.get('repository_dir', '/etc/apt-repo')
     deb_package_dir = config.get('deb_package_dir', '/opt/debs')
     release_template = config.get('release_template', 'templates/Release.template')
@@ -60,7 +60,7 @@ def main() -> None:
 
     public_key = GpgKey(private_key_id, public_key_path)
     private_key = GpgKey(private_key_id, private_key_path, private_key_pass)
-    apt_signer = ReleaseSigner(GPG(), public_key, private_key, repository_dir)
+    apt_signer = ReleaseSigner(GPG(), public_key, private_key, repository_dir, distributions)
     apt_repository = LinkedPoolAptRepository(
         APPLICATION_NAME, architectures, distributions, repository_dir, deb_package_dir, release_template_path
     )

@@ -1,29 +1,57 @@
-name: Python release
+name: Test and Release
 
 on:
   push:
-    tags:
-      - "v*.*.*"
+    branches: main
+    tags: v*.*.*
+
+  pull_request:
+    branches: [ "main" ]
+    types:
+      - synchronize
+      - opened
+      - reopened
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: true
 
 jobs:
-  publish-and-release:
-    name: Publish and release distributions
+  test:
+    name: Build and test
 
     runs-on: ubuntu-latest
 
     permissions:
+      # Gives the action the necessary permissions for publishing new
+      # comments in pull requests.
+      pull-requests: write
       contents: write
-      discussions: write
+      statuses: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Verify changes
+        uses: EffectiveRange/python-verify-github-action@v1
+        with:
+          coverage-threshold: '95'
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: test
+
+    name: Publish and release
+
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Package and publish
-        uses: EffectiveRange/python-package-github-action@v1
+        uses: EffectiveRange/python-package-github-action@v2
         with:
-          python-version: '3.11'
-          debian-dist-type: 'application'
-          debian-dist-command: 'make package'
+          debian-dist-type: 'fpm-deb'
           post-build-command: 'make service TAG=${GITHUB_REF#refs/tags/}'
       - name: Set up QEMU for multi-architecture builds
         uses: docker/setup-qemu-action@v3
@@ -47,7 +75,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            PACKAGE_ARCHS=armhf,arm64,amd64
       - name: Release
         uses: EffectiveRange/version-release-github-action@v1

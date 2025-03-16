@@ -46,7 +46,7 @@ class AptServer(FileSystemEventHandler):
         self._sign_repository()
 
         log.info('Watching directory for .deb file changes', directory=self._deb_package_dir)
-        self._observer.schedule(self, self._deb_package_dir)
+        self._observer.schedule(self, self._deb_package_dir, recursive=True)
 
         log.info('Starting component', component='file-observer')
         self._observer.start()

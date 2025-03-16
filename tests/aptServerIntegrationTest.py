@@ -117,7 +117,7 @@ def create_components():
     gpg = GPG()
     public_key = GpgKey(KEY_ID, PUBLIC_KEY_PATH)
     private_key = GpgKey(KEY_ID, PRIVATE_KEY_PATH, PASSPHRASE)
-    apt_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR)
+    apt_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR, {DISTRIBUTION})
     apt_repository = LinkedPoolAptRepository(
         APPLICATION_NAME, {ARCHITECTURE}, {DISTRIBUTION}, REPOSITORY_DIR, PACKAGE_DIR, TEMPLATE_PATH
     )

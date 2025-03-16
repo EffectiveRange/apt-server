@@ -11,6 +11,7 @@ from tests import TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR, fill_templa
 
 APPLICATION_NAME = 'apt-server'
 ARCHITECTURE = 'amd64'
+DISTRIBUTION = 'stable'
 TEMPLATE_PATH = f'{RESOURCE_ROOT}/templates/Release.template'
 RELEASE_DIR = f'{REPOSITORY_DIR}/dists/stable'
 PRIVATE_KEY_PATH = f'{TEST_RESOURCE_ROOT}/keys/private-key.asc'
@@ -34,7 +35,7 @@ class AptSignerTest(TestCase):
         # Given
         gpg, public_key, private_key = create_components()
         gpg.list_keys.return_value = [{'fingerprint': 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'}, {'fingerprint': KEY_ID}]
-        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR)
+        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR, {DISTRIBUTION})
 
         # When
         release_signer.sign()
@@ -64,7 +65,7 @@ class AptSignerTest(TestCase):
     def test_sign_when_key_is_imported(self):
         # Given
         gpg, public_key, private_key = create_components()
-        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR)
+        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR, {DISTRIBUTION})
 
         # When
         release_signer.sign()
@@ -94,7 +95,7 @@ class AptSignerTest(TestCase):
     def test_exception_raised_when_fail_to_import_key(self):
         # Given
         gpg, public_key, private_key = create_components(import_code=1)
-        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR)
+        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR, {DISTRIBUTION})
 
         # When
         self.assertRaises(GpgException, release_signer.sign)
@@ -106,7 +107,7 @@ class AptSignerTest(TestCase):
     def test_exception_raised_when_failed_to_create_signature(self):
         # Given
         gpg, public_key, private_key = create_components(sign_codes=[1, 0])
-        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR)
+        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR, {DISTRIBUTION})
 
         # When
         self.assertRaises(GpgException, release_signer.sign)
@@ -119,7 +120,7 @@ class AptSignerTest(TestCase):
     def test_exception_raised_when_failed_to_verify_signature(self):
         # Given
         gpg, public_key, private_key = create_components(verify_codes=[1, 0])
-        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR)
+        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR, {DISTRIBUTION})
 
         # When
         self.assertRaises(GpgException, release_signer.sign)
@@ -132,7 +133,7 @@ class AptSignerTest(TestCase):
     def test_exception_raised_when_failed_to_create_detached_signature(self):
         # Given
         gpg, public_key, private_key = create_components(sign_codes=[0, 1])
-        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR)
+        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR, {DISTRIBUTION})
 
         # When
         self.assertRaises(GpgException, release_signer.sign)
@@ -145,7 +146,7 @@ class AptSignerTest(TestCase):
     def test_exception_raised_when_failed_to_verify_detached_signature(self):
         # Given
         gpg, public_key, private_key = create_components(verify_codes=[0, 1])
-        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR)
+        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR, {DISTRIBUTION})
 
         # When
         self.assertRaises(GpgException, release_signer.sign)
