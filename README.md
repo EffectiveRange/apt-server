@@ -40,7 +40,7 @@ Clone the repository and install the package with apt.
 
 ```bash
 make package
-apt install apt-server_1.0.0_all.deb
+apt install ./apt-server_1.0.0_all.deb
 ```
 
 ### From GitHub release
@@ -48,7 +48,7 @@ apt install apt-server_1.0.0_all.deb
 Download the latest release from the GitHub repository and install the package with apt.
 
 ```bash
-apt install apt-server_1.0.0_all.deb
+apt install ./apt-server_1.0.0_all.deb
 ``` 
 
 ## Usage
