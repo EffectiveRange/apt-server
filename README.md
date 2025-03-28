@@ -1,3 +1,6 @@
+[![CI](https://github.com/EffectiveRange/apt-server/actions/workflows/ci.yaml/badge.svg)](https://github.com/EffectiveRange/apt-server/actions/workflows/ci.yaml)
+[![Coverage badge](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/EffectiveRange/apt-server/python-coverage-comment-action-data/endpoint.json)](https://htmlpreview.github.io/?https://github.com/EffectiveRange/apt-server/blob/python-coverage-comment-action-data/htmlcov/index.html)
+
 # apt-server
 
 APT server with dynamic package pool handling. Dynamic behavior is achieved by listening file changes in package pool
