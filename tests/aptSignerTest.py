@@ -1,13 +1,14 @@
 import unittest
+from pathlib import Path
 from unittest import TestCase, mock
 from unittest.mock import MagicMock
 
-from common_utility import delete_directory, create_file
+from common_utility import delete_directory, create_file, render_template_file
 from context_logger import setup_logging
 from gnupg import GPG, Sign, Verify, ImportResult
 
 from apt_repository.aptSigner import ReleaseSigner, GpgKey, GpgException
-from tests import TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR, fill_template
+from tests import TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR
 
 APPLICATION_NAME = 'apt-server'
 ARCHITECTURE = 'amd64'
@@ -186,14 +187,14 @@ def create_components(import_code=0, sign_codes=None, verify_codes=None):
     verify_result2.status = 'verified'
     gpg.verify_file.side_effect = [verify_result1, verify_result2]
 
-    public_key = GpgKey(KEY_ID, PUBLIC_KEY_PATH)
-    private_key = GpgKey(KEY_ID, PRIVATE_KEY_PATH, PASSPHRASE)
+    public_key = GpgKey(KEY_ID, Path(PUBLIC_KEY_PATH))
+    private_key = GpgKey(KEY_ID, Path(PRIVATE_KEY_PATH), PASSPHRASE)
 
     return gpg, public_key, private_key
 
 
 def create_files():
-    release = fill_template(
+    release = render_template_file(
         TEMPLATE_PATH,
         {'origin': APPLICATION_NAME, 'label': APPLICATION_NAME, 'version': '1.1.3', 'architectures': 'all amd64'},
     )

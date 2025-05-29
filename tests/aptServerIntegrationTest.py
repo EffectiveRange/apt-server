@@ -2,27 +2,28 @@ import unittest
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer, HTTPServer
 from importlib.metadata import version
+from pathlib import Path
 from threading import Thread
 from unittest import TestCase
 
 import requests
-from common_utility import delete_directory
+from common_utility import delete_directory, render_template_file
 from context_logger import setup_logging
 from gnupg import GPG
-from test_utility import wait_for_condition
+from test_utility import wait_for_condition, compare_lines
 from watchdog.observers import Observer
 
 from apt_repository import ReleaseSigner, LinkedPoolAptRepository, GpgKey
 from apt_server import AptServer
-from tests import create_test_packages, compare_lines, fill_template, TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR
+from tests import create_test_packages, TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR
 
 APPLICATION_NAME = 'apt-server'
 ARCHITECTURE = 'amd64'
 DISTRIBUTION = 'stable'
-PACKAGE_DIR = f'{TEST_RESOURCE_ROOT}/test-debs'
-TEMPLATE_PATH = f'{RESOURCE_ROOT}/templates/Release.template'
-PRIVATE_KEY_PATH = f'{TEST_RESOURCE_ROOT}/keys/private-key.asc'
-PUBLIC_KEY_PATH = f'{TEST_RESOURCE_ROOT}/keys/public-key.asc'
+PACKAGE_DIR = Path(f'{TEST_RESOURCE_ROOT}/test-debs')
+TEMPLATE_PATH = Path(f'{RESOURCE_ROOT}/templates/Release.template')
+PRIVATE_KEY_PATH = Path(f'{TEST_RESOURCE_ROOT}/keys/private-key.asc')
+PUBLIC_KEY_PATH = Path(f'{TEST_RESOURCE_ROOT}/keys/public-key.asc')
 KEY_ID = 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3'
 PASSPHRASE = 'test1234'
 SERVER_HOST = 'http://127.0.0.1'
@@ -52,7 +53,7 @@ class AptServerIntegrationTest(TestCase):
 
             # Then
             self.assertEqual(200, response.status_code)
-            expected_lines = fill_template(
+            expected_lines = render_template_file(
                 TEMPLATE_PATH,
                 {
                     'origin': APPLICATION_NAME,
@@ -64,7 +65,7 @@ class AptServerIntegrationTest(TestCase):
             ).splitlines(True)
             expected_lines.append(f'SignWith: {KEY_ID}')
             actual_lines = response.content.decode(response.apparent_encoding).splitlines(True)
-            exclusions = ['{{', 'Date', 'Packages']
+            exclusions = ['', 'Date', 'Packages']
             all_matches = compare_lines(expected_lines, actual_lines, exclusions)
 
             self.assertTrue(all_matches)

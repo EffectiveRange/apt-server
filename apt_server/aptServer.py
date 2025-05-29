@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 from http.server import HTTPServer
+from pathlib import Path
 from threading import Thread
 from typing import Any
 
@@ -18,14 +19,8 @@ log = get_logger('AptServer')
 
 class AptServer(FileSystemEventHandler):
 
-    def __init__(
-        self,
-        apt_repository: AptRepository,
-        apt_signer: AptSigner,
-        observer: BaseObserver,
-        web_server: HTTPServer,
-        deb_package_dir: str,
-    ) -> None:
+    def __init__(self, apt_repository: AptRepository, apt_signer: AptSigner, observer: BaseObserver,
+                 web_server: HTTPServer, deb_package_dir: Path) -> None:
         self._apt_repository = apt_repository
         self._apt_signer = apt_signer
         self._observer = observer
@@ -45,8 +40,8 @@ class AptServer(FileSystemEventHandler):
         log.info('Signing initial repository')
         self._sign_repository()
 
-        log.info('Watching directory for .deb file changes', directory=self._deb_package_dir)
-        self._observer.schedule(self, self._deb_package_dir, recursive=True)
+        log.info('Watching directory for .deb file changes', directory=str(self._deb_package_dir))
+        self._observer.schedule(self, str(self._deb_package_dir), recursive=True)
 
         log.info('Starting component', component='file-observer')
         self._observer.start()
