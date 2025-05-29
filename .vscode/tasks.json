@@ -1,0 +1,15 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Create Python venv",
+            "type": "shell",
+            "command": "if [ -d /var/chroot/buildroot ];then dpkgdeps -v --arch $(grep TARGET_ARCH /home/crossbuilder/target/target | cut -d'=' -f2  | tr -d \\') .;else dpkgdeps -v .;fi && rm -rf .venv && python3 -m venv --system-site-packages .venv && .venv/bin/pip install -e . && .venv/bin/python3 -m mypy --non-interactive --install-types && .venv/bin/pip install pytest-cov || true",
+            "group": "build",
+            "detail": "Creates a Python virtual environment in the .venv folder",
+            "problemMatcher": [
+                "$eslint-compact"
+            ]
+        }
+    ]
+}

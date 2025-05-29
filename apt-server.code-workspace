@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"python.formatting.provider": "black",
+		"editor.formatOnSave": true,
+		"mypy-type-checker.ignorePatterns": [
+		],
+		"flake8.ignorePatterns": [
+		]
+	}
+}

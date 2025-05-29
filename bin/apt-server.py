@@ -32,7 +32,7 @@ def main() -> None:
 
     setup_logging(APPLICATION_NAME)
 
-    config = ConfigLoader(resource_root, f'config/{APPLICATION_NAME}.conf').load(arguments)
+    config = ConfigLoader(resource_root / f'config/{APPLICATION_NAME}.conf').load(arguments)
 
     _update_logging(config)
 
@@ -42,30 +42,23 @@ def main() -> None:
 
     architectures = {arch.strip() for arch in config['architectures'].split(',')}
     distributions = {dist.strip() for dist in config.get('distributions', 'stable').split(',')}
-    repository_dir = config.get('repository_dir', '/etc/apt-repo')
-    deb_package_dir = config.get('deb_package_dir', '/opt/debs')
-    release_template = config.get('release_template', 'templates/Release.template')
+    repository_dir = _get_absolute_path(config.get('repository_dir', '/etc/apt-repo'))
+    deb_package_dir = _get_absolute_path(config.get('deb_package_dir', '/opt/debs'))
+    release_template = _get_absolute_path(config.get('release_template', 'templates/Release.template'))
 
     private_key_id = config.get('private_key_id', 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3')
-    private_key_path = config.get('private_key_path', 'tests/keys/private-key.asc')
+    private_key_path = _get_absolute_path(config.get('private_key_path', 'tests/keys/private-key.asc'))
     private_key_pass = config.get('private_key_pass', 'test1234')
-    public_key_path = config.get('public_key_path', 'tests/keys/public-key.asc')
-
-    resource_root = _get_resource_root()
-    repository_dir = _get_absolute_path(resource_root, repository_dir)
-    deb_package_dir = _get_absolute_path(resource_root, deb_package_dir)
-    private_key_path = _get_absolute_path(resource_root, private_key_path)
-    public_key_path = _get_absolute_path(resource_root, public_key_path)
-    release_template_path = _get_absolute_path(resource_root, release_template)
+    public_key_path = _get_absolute_path(config.get('public_key_path', 'tests/keys/public-key.asc'))
 
     public_key = GpgKey(private_key_id, public_key_path)
     private_key = GpgKey(private_key_id, private_key_path, private_key_pass)
     apt_signer = ReleaseSigner(GPG(), public_key, private_key, repository_dir, distributions)
     apt_repository = LinkedPoolAptRepository(
-        APPLICATION_NAME, architectures, distributions, repository_dir, deb_package_dir, release_template_path
+        APPLICATION_NAME, architectures, distributions, repository_dir, deb_package_dir, release_template
     )
 
-    handler_class = partial(SimpleHTTPRequestHandler, directory=repository_dir)
+    handler_class = partial(SimpleHTTPRequestHandler, directory=str(repository_dir))
     web_server = ThreadingHTTPServer(('', server_port), handler_class)
 
     apt_server = AptServer(apt_repository, apt_signer, Observer(), web_server, deb_package_dir)
@@ -108,15 +101,15 @@ def _get_arguments() -> dict[str, Any]:
     return {k: v for k, v in vars(parser.parse_args()).items() if v is not None}
 
 
-def _get_resource_root() -> str:
-    return str(Path(os.path.dirname(__file__)).parent.absolute())
+def _get_resource_root() -> Path:
+    return Path(os.path.dirname(__file__)).parent.absolute()
 
 
-def _get_absolute_path(resource_root: str, path: str) -> str:
+def _get_absolute_path(path: str) -> Path:
     if path.startswith('/'):
-        return path
+        return Path(path)
     else:
-        return f'{resource_root}/{path}'
+        return _get_resource_root() / path
 
 
 def _update_logging(configuration: dict[str, Any]) -> None:

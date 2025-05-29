@@ -1,0 +1,20 @@
+{
+    "python.venvPath": "${workspaceFolder}/.venv",
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./tests",
+        "-p",
+        "*test.py"
+    ],
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "black-formatter.interpreter": [
+        "${workspaceFolder}/.venv/bin/python3"
+    ],
+    "black-formatter.args": [
+        "--config=setup.cfg"
+    ],
+    "python.analysis.typeCheckingMode": "standard",
+    "python.testing.pytestArgs": []
+}

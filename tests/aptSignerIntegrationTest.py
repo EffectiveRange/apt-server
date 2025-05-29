@@ -1,6 +1,7 @@
 import os
 import unittest
 from collections import deque
+from pathlib import Path
 from unittest import TestCase
 
 from common_utility import delete_directory
@@ -14,10 +15,10 @@ from tests import create_test_packages, TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOS
 APPLICATION_NAME = 'apt-server'
 ARCHITECTURE = 'amd64'
 DISTRIBUTION = 'stable'
-PACKAGE_DIR = f'{TEST_RESOURCE_ROOT}/test-debs'
-TEMPLATE_PATH = f'{RESOURCE_ROOT}/templates/Release.template'
-PRIVATE_KEY_PATH = f'{TEST_RESOURCE_ROOT}/keys/private-key.asc'
-PUBLIC_KEY_PATH = f'{TEST_RESOURCE_ROOT}/keys/public-key.asc'
+PACKAGE_DIR = Path(f'{TEST_RESOURCE_ROOT}/test-debs')
+TEMPLATE_PATH = Path(f'{RESOURCE_ROOT}/templates/Release.template')
+PRIVATE_KEY_PATH = Path(f'{TEST_RESOURCE_ROOT}/keys/private-key.asc')
+PUBLIC_KEY_PATH = Path(f'{TEST_RESOURCE_ROOT}/keys/public-key.asc')
 KEY_ID = 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3'
 PASSPHRASE = 'test1234'
 

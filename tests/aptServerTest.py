@@ -1,5 +1,6 @@
 import unittest
 from http.server import HTTPServer
+from pathlib import Path
 from unittest import TestCase
 from unittest.mock import MagicMock
 
@@ -22,7 +23,7 @@ class AptServerTest(TestCase):
 
     def test_startup_and_shutdown(self):
         # Given
-        deb_package_dir = 'path/to/packages'
+        deb_package_dir = Path('path/to/packages')
         apt_repository, apt_signer, observer, web_server = create_mocks()
 
         with AptServer(apt_repository, apt_signer, observer, web_server, deb_package_dir) as apt_server:
@@ -32,7 +33,7 @@ class AptServerTest(TestCase):
             # Then
             apt_repository.create.assert_called_once()
             apt_signer.sign.assert_called_once()
-            observer.schedule.assert_called_once_with(apt_server, deb_package_dir, recursive=True)
+            observer.schedule.assert_called_once_with(apt_server, str(deb_package_dir), recursive=True)
             observer.start.assert_called_once()
             web_server.serve_forever.assert_called_once()
 
@@ -41,7 +42,7 @@ class AptServerTest(TestCase):
 
     def test_repository_recreated_when_new_package_added(self):
         # Given
-        deb_package_dir = 'path/to/packages'
+        deb_package_dir = Path('path/to/packages')
         apt_repository, apt_signer, observer, web_server = create_mocks()
         apt_server = AptServer(apt_repository, apt_signer, observer, web_server, deb_package_dir)
         event = FileCreatedEvent(f'{deb_package_dir}/new-package.deb')
@@ -55,7 +56,7 @@ class AptServerTest(TestCase):
 
     def test_repository_recreated_when_package_renamed(self):
         # Given
-        deb_package_dir = 'path/to/packages'
+        deb_package_dir = Path('path/to/packages')
         apt_repository, apt_signer, observer, web_server = create_mocks()
         apt_server = AptServer(apt_repository, apt_signer, observer, web_server, deb_package_dir)
         event = FileMovedEvent(f'{deb_package_dir}/renamed-package.deb')
@@ -69,7 +70,7 @@ class AptServerTest(TestCase):
 
     def test_repository_recreated_when_package_removed(self):
         # Given
-        deb_package_dir = 'path/to/packages'
+        deb_package_dir = Path('path/to/packages')
         apt_repository, apt_signer, observer, web_server = create_mocks()
         apt_server = AptServer(apt_repository, apt_signer, observer, web_server, deb_package_dir)
         event = FileDeletedEvent(f'{deb_package_dir}/removed-package.deb')
@@ -83,7 +84,7 @@ class AptServerTest(TestCase):
 
     def test_no_operation_when_non_package_file_added(self):
         # Given
-        deb_package_dir = 'path/to/packages'
+        deb_package_dir = Path('path/to/packages')
         apt_repository, apt_signer, observer, web_server = create_mocks()
         apt_server = AptServer(apt_repository, apt_signer, observer, web_server, deb_package_dir)
         event = FileCreatedEvent(f'{deb_package_dir}/new-file.tar.gz')

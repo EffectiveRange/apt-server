@@ -1,26 +1,26 @@
 import os
 import unittest
 from importlib.metadata import version
+from pathlib import Path
 from unittest import TestCase
 
-from common_utility import delete_directory
+from common_utility import delete_directory, render_template_file
 from context_logger import setup_logging
+from test_utility import compare_lines
 
 from apt_repository.aptRepository import LinkedPoolAptRepository
 from tests import (
     create_test_packages,
-    fill_template,
     TEST_RESOURCE_ROOT,
     REPOSITORY_DIR,
-    RESOURCE_ROOT,
-    compare_lines,
+    RESOURCE_ROOT
 )
 
 APPLICATION_NAME = 'apt-server'
 ARCHITECTURE = 'amd64'
 DISTRIBUTION = 'stable'
-PACKAGE_DIR = f'{TEST_RESOURCE_ROOT}/test-debs'
-TEMPLATE_PATH = f'{TEST_RESOURCE_ROOT}/../templates/Release.template'
+PACKAGE_DIR = Path(f'{TEST_RESOURCE_ROOT}/test-debs')
+TEMPLATE_PATH = Path(f'{TEST_RESOURCE_ROOT}/../templates/Release.template')
 
 
 class AptRepositoryTest(TestCase):
@@ -70,7 +70,7 @@ class AptRepositoryTest(TestCase):
 
     def test_packages_files_generated(self):
         # Given
-        expected_packages = fill_template(
+        expected_packages = render_template_file(
             f'{TEST_RESOURCE_ROOT}/expected/Packages.template',
             {'architecture': 'amd64', 'distribution': DISTRIBUTION},
         ).splitlines()
@@ -104,11 +104,11 @@ class AptRepositoryTest(TestCase):
         create_test_packages(PACKAGE_DIR, 'bullseye')
         create_test_packages(PACKAGE_DIR, 'bookworm')
 
-        expected_packages_bullseye = fill_template(
+        expected_packages_bullseye = render_template_file(
             f'{TEST_RESOURCE_ROOT}/expected/Packages.template',
             {'architecture': 'amd64', 'distribution': 'bullseye'},
         ).splitlines()
-        expected_packages_bookworm = fill_template(
+        expected_packages_bookworm = render_template_file(
             f'{TEST_RESOURCE_ROOT}/expected/Packages.template',
             {'architecture': 'amd64', 'distribution': 'bookworm'},
         ).splitlines()
@@ -144,7 +144,7 @@ class AptRepositoryTest(TestCase):
 
     def test_release_file_generated(self):
         # Given
-        expected_release = fill_template(
+        expected_release = render_template_file(
             f'{RESOURCE_ROOT}/templates/Release.template',
             {
                 'origin': APPLICATION_NAME,
@@ -168,7 +168,7 @@ class AptRepositoryTest(TestCase):
 
         release = open(release_file_path, 'r').read().splitlines()
 
-        exclusions = ['{{', 'Date', 'Packages']
+        exclusions = ['', 'Date', 'Packages']
 
         all_matches = compare_lines(expected_release, release, exclusions)
         self.assertTrue(all_matches)
@@ -179,7 +179,7 @@ class AptRepositoryTest(TestCase):
         create_test_packages(PACKAGE_DIR, 'bullseye')
         create_test_packages(PACKAGE_DIR, 'bookworm')
 
-        expected_release_bullseye = fill_template(
+        expected_release_bullseye = render_template_file(
             f'{RESOURCE_ROOT}/templates/Release.template',
             {
                 'origin': APPLICATION_NAME,
@@ -189,7 +189,7 @@ class AptRepositoryTest(TestCase):
                 'architectures': 'all amd64',
             },
         ).splitlines()
-        expected_release_bookworm = fill_template(
+        expected_release_bookworm = render_template_file(
             f'{RESOURCE_ROOT}/templates/Release.template',
             {
                 'origin': APPLICATION_NAME,
@@ -216,7 +216,7 @@ class AptRepositoryTest(TestCase):
         release_bullseye = open(release_bullseye_path, 'r').read().splitlines()
         release_bookworm = open(release_bookworm_path, 'r').read().splitlines()
 
-        exclusions = ['{{', 'Date', 'Packages']
+        exclusions = ['', 'Date', 'Packages']
 
         all_matches = compare_lines(expected_release_bullseye, release_bullseye, exclusions)
         self.assertTrue(all_matches)

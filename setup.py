@@ -1,14 +1,15 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='apt-server',
-    version='1.2.0',
     description='APT server with dynamic package pool handling',
     author='Ferenc Nandor Janky & Attila Gombos',
     author_email='info@effective-range.com',
-    packages=['apt_server', 'apt_repository'],
+    packages=find_packages(exclude=['tests']),
     scripts=['bin/apt-server.py'],
     data_files=[('config', ['config/apt-server.conf']), ('templates', ['templates/Release.template'])],
+    use_scm_version=True,
+    setup_requires=["setuptools_scm"],
     install_requires=[
         'watchdog',
         'jinja2',
