@@ -11,6 +11,8 @@ setup(
     use_scm_version=True,
     setup_requires=["setuptools_scm"],
     install_requires=[
+        'flask',
+        'waitress',
         'watchdog',
         'jinja2',
         'python-gnupg',

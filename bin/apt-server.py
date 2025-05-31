@@ -7,8 +7,6 @@
 import argparse
 import os
 import signal
-from functools import partial
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +17,7 @@ from watchdog.observers import Observer
 
 from apt_repository.aptRepository import LinkedPoolAptRepository
 from apt_repository.aptSigner import ReleaseSigner, GpgKey
-from apt_server import AptServer
+from apt_server import AptServer, WebServerConfig, WebServer
 
 APPLICATION_NAME = 'apt-server'
 
@@ -38,7 +36,7 @@ def main() -> None:
 
     log.info(f'Started {APPLICATION_NAME}', arguments=config)
 
-    server_port = int(config.get('server_port', 9000))
+    server_port = int(config.get('server_port', 8443))
 
     architectures = {arch.strip() for arch in config['architectures'].split(',')}
     distributions = {dist.strip() for dist in config.get('distributions', 'stable').split(',')}
@@ -58,8 +56,12 @@ def main() -> None:
         APPLICATION_NAME, architectures, distributions, repository_dir, deb_package_dir, release_template
     )
 
-    handler_class = partial(SimpleHTTPRequestHandler, directory=str(repository_dir))
-    web_server = ThreadingHTTPServer(('', server_port), handler_class)
+    certificate_path = _get_absolute_path(config.get('certificate_path', 'tests/keys/cert.pem'))
+    certificate_key_path = _get_absolute_path(config.get('certificate_key_path', 'tests/keys/cert_key.pem'))
+    server_config = WebServerConfig('*', server_port, repository_dir, certificate_path, certificate_key_path, 'admin',
+                                    'password')
+    private_dirs = [path for path in repository_dir.joinpath('pool/main').glob('**/private') if path.is_dir()]
+    web_server = WebServer(Observer(), server_config, private_dirs)
 
     apt_server = AptServer(apt_repository, apt_signer, Observer(), web_server, deb_package_dir)
 
@@ -85,7 +87,7 @@ def _get_arguments() -> dict[str, Any]:
     parser.add_argument('-f', '--log-file', help='log file path')
     parser.add_argument('-l', '--log-level', help='logging level')
 
-    parser.add_argument('--server-port', help='repository server port to listen on', default=9000, type=int)
+    parser.add_argument('--server-port', help='repository server port to listen on', type=int)
 
     parser.add_argument('--architectures', help='served package architectures (comma separated)')
     parser.add_argument('--distributions', help='supported distributions (comma separated)')

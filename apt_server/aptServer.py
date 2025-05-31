@@ -2,9 +2,8 @@
 # SPDX-FileCopyrightText: 2024 Attila Gombos <attila.gombos@effective-range.com>
 # SPDX-License-Identifier: MIT
 
-from http.server import HTTPServer
 from pathlib import Path
-from threading import Thread
+from threading import Thread, Event
 from typing import Any
 
 from context_logger import get_logger
@@ -13,6 +12,7 @@ from watchdog.observers.api import BaseObserver
 
 from apt_repository import AptSigner, GpgException
 from apt_repository.aptRepository import AptRepository
+from apt_server import WebServer
 
 log = get_logger('AptServer')
 
@@ -20,12 +20,13 @@ log = get_logger('AptServer')
 class AptServer(FileSystemEventHandler):
 
     def __init__(self, apt_repository: AptRepository, apt_signer: AptSigner, observer: BaseObserver,
-                 web_server: HTTPServer, deb_package_dir: Path) -> None:
+                 web_server: WebServer, deb_package_dir: Path) -> None:
         self._apt_repository = apt_repository
         self._apt_signer = apt_signer
         self._observer = observer
         self._web_server = web_server
         self._deb_package_dir = deb_package_dir
+        self._event = Event()
 
     def __enter__(self) -> 'AptServer':
         return self
@@ -47,11 +48,14 @@ class AptServer(FileSystemEventHandler):
         self._observer.start()
 
         log.info('Starting component', component='web-server')
-        self._web_server.serve_forever()
+        self._web_server.start()
+
+        self._event.wait()
 
     def shutdown(self) -> None:
         self._observer.stop()
         Thread(target=self._web_server.shutdown).start()
+        self._event.set()
 
     def on_created(self, event: FileSystemEvent) -> None:
         self._on_changed(event)
