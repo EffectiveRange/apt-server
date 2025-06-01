@@ -10,7 +10,7 @@ import signal
 from pathlib import Path
 from typing import Any
 
-from common_utility import ConfigLoader
+from common_utility import ConfigLoader, ReusableTimer
 from context_logger import get_logger, setup_logging
 from gnupg import GPG
 from watchdog.observers import Observer
@@ -62,8 +62,9 @@ def main() -> None:
                                     'password')
     private_dirs = [path for path in repository_dir.joinpath('pool/main').glob('**/private') if path.is_dir()]
     web_server = WebServer(Observer(), server_config, private_dirs)
+    timer = ReusableTimer()
 
-    apt_server = AptServer(apt_repository, apt_signer, Observer(), web_server, deb_package_dir)
+    apt_server = AptServer(timer, apt_repository, apt_signer, Observer(), web_server, deb_package_dir)
 
     def signal_handler(signum: int, frame: Any) -> None:
         log.info('Shutting down', signum=signum)

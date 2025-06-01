@@ -122,9 +122,7 @@ class WebServer(FileSystemEventHandler):
                 except PermissionError:
                     abort(403)
             elif os.path.isfile(full_path):
-                view = request.args.get('view', '0') == '1'
-                mime = 'text/plain' if view else 'application/octet-stream'
-                return send_from_directory(self._config.root, path, as_attachment=not view, mimetype=mime)
+                return send_from_directory(self._config.root, path, as_attachment=False, mimetype='text/plain')
             else:
                 abort(404)
 
@@ -210,8 +208,8 @@ TEMPLATE = """
     </tr>
     {% for item in items %}
       <tr>
-        <td class="name"><a href="{{ item.href }}?view=1">{% if item.is_parent %}↩️{% else %}
-        {% if item.is_dir %}📁{% else %}📄{% endif %}{% endif %} </a><a href="{{ item.href }}">{{ item.name }}</a></td>
+        <td class="name"><a href="{{ item.href }}">{% if item.is_parent %}↩️{% else %}
+        {% if item.is_dir %}📁{% else %}📄{% endif %}{% endif %} {{ item.name }}</a></td>
         <td class="date">{{ item.date }}</td>
         <td class="size">{{ item.size }}</td>
       </tr>

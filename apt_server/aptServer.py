@@ -6,6 +6,7 @@ from pathlib import Path
 from threading import Thread, Event
 from typing import Any
 
+from common_utility import IReusableTimer
 from context_logger import get_logger
 from watchdog.events import FileSystemEventHandler, FileSystemEvent
 from watchdog.observers.api import BaseObserver
@@ -19,13 +20,15 @@ log = get_logger('AptServer')
 
 class AptServer(FileSystemEventHandler):
 
-    def __init__(self, apt_repository: AptRepository, apt_signer: AptSigner, observer: BaseObserver,
-                 web_server: WebServer, deb_package_dir: Path) -> None:
+    def __init__(self, timer: IReusableTimer, apt_repository: AptRepository, apt_signer: AptSigner,
+                 observer: BaseObserver, web_server: WebServer, deb_package_dir: Path, delay: float = 5) -> None:
+        self._timer = timer
         self._apt_repository = apt_repository
         self._apt_signer = apt_signer
         self._observer = observer
         self._web_server = web_server
         self._deb_package_dir = deb_package_dir
+        self._delay = delay
         self._event = Event()
 
     def __enter__(self) -> 'AptServer':
@@ -36,10 +39,7 @@ class AptServer(FileSystemEventHandler):
 
     def run(self) -> None:
         log.info('Creating initial repository')
-        self._apt_repository.create()
-
-        log.info('Signing initial repository')
-        self._sign_repository()
+        self._timer.start(self._delay, self._create_repository)
 
         log.info('Watching directory for .deb file changes', directory=str(self._deb_package_dir))
         self._observer.schedule(self, str(self._deb_package_dir), recursive=True)
@@ -69,19 +69,16 @@ class AptServer(FileSystemEventHandler):
     def _on_changed(self, event: FileSystemEvent) -> None:
         if str(event.src_path).endswith('.deb'):
             log.info('File change event, recreating repository', event_type=event.event_type, file=event.src_path)
-            self._apt_repository.create()
-            self._sign_repository()
+            self._timer.restart()
         else:
             log.info('File change event, ignoring as not a package', event_type=event.event_type, file=event.src_path)
 
-    def _sign_repository(self) -> None:
+    def _create_repository(self) -> None:
         try:
+            self._apt_repository.create()
             self._apt_signer.sign()
         except GpgException as exception:
-            log.error(
-                'Error signing repository',
-                operation=exception.operation,
-                code=exception.code,
-                status=exception.status,
-                error=exception.error,
-            )
+            log.error('Error signing repository', operation=exception.operation, code=exception.code,
+                      status=exception.status, error=exception.error)
+        except Exception as exception:
+            log.exception('Error creating repository', error=exception)
