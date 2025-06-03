@@ -13,7 +13,7 @@ from watchdog.observers.api import BaseObserver
 
 from apt_repository import AptSigner, GpgException
 from apt_repository.aptRepository import AptRepository
-from apt_server import WebServer
+from apt_server import IDirectoryService
 
 log = get_logger('AptServer')
 
@@ -21,12 +21,13 @@ log = get_logger('AptServer')
 class AptServer(FileSystemEventHandler):
 
     def __init__(self, timer: IReusableTimer, apt_repository: AptRepository, apt_signer: AptSigner,
-                 observer: BaseObserver, web_server: WebServer, deb_package_dir: Path, delay: float = 5) -> None:
+                 observer: BaseObserver, directory_service: IDirectoryService, deb_package_dir: Path,
+                 delay: float = 5) -> None:
         self._timer = timer
         self._apt_repository = apt_repository
         self._apt_signer = apt_signer
         self._observer = observer
-        self._web_server = web_server
+        self._directory_service = directory_service
         self._deb_package_dir = deb_package_dir
         self._delay = delay
         self._event = Event()
@@ -47,14 +48,14 @@ class AptServer(FileSystemEventHandler):
         log.info('Starting component', component='file-observer')
         self._observer.start()
 
-        log.info('Starting component', component='web-server')
-        self._web_server.start()
+        log.info('Starting component', component='directory-service')
+        self._directory_service.start()
 
         self._event.wait()
 
     def shutdown(self) -> None:
         self._observer.stop()
-        Thread(target=self._web_server.shutdown).start()
+        Thread(target=self._directory_service.shutdown).start()
         self._event.set()
 
     def on_created(self, event: FileSystemEvent) -> None:

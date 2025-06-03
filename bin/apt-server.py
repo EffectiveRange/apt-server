@@ -17,7 +17,7 @@ from watchdog.observers import Observer
 
 from apt_repository.aptRepository import LinkedPoolAptRepository
 from apt_repository.aptSigner import ReleaseSigner, GpgKey
-from apt_server import AptServer, WebServerConfig, WebServer
+from apt_server import AptServer, ServerConfig, WebServer, DirectoryConfig, DirectoryService
 
 APPLICATION_NAME = 'apt-server'
 
@@ -58,13 +58,17 @@ def main() -> None:
 
     certificate_path = _get_absolute_path(config.get('certificate_path', 'tests/keys/cert.pem'))
     certificate_key_path = _get_absolute_path(config.get('certificate_key_path', 'tests/keys/cert_key.pem'))
-    server_config = WebServerConfig('*', server_port, repository_dir, certificate_path, certificate_key_path, 'admin',
-                                    'password')
+    server_config = ServerConfig('*', server_port, certificate_path, certificate_key_path)
+    web_server = WebServer(Observer(), server_config)
+
+    directory_username = config.get('directory_username', 'admin')
+    directory_password = config.get('directory_password', 'admin')
     private_dirs = [path for path in repository_dir.joinpath('pool/main').glob('**/private') if path.is_dir()]
-    web_server = WebServer(Observer(), server_config, private_dirs)
+    directory_config = DirectoryConfig(repository_dir, directory_username, directory_password, private_dirs)
+    directory_service = DirectoryService(web_server, directory_config)
     timer = ReusableTimer()
 
-    apt_server = AptServer(timer, apt_repository, apt_signer, Observer(), web_server, deb_package_dir)
+    apt_server = AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, deb_package_dir)
 
     def signal_handler(signum: int, frame: Any) -> None:
         log.info('Shutting down', signum=signum)
@@ -100,6 +104,11 @@ def _get_arguments() -> dict[str, Any]:
     parser.add_argument('--private-key-path', help='path of key used for signing')
     parser.add_argument('--private-key-pass', help='passphrase of key used for signing')
     parser.add_argument('--public-key-path', help='path of key used for verification')
+
+    parser.add_argument('--certificate-path', help='path of the server certificate')
+    parser.add_argument('--certificate-key-path', help='path of the server certificate key')
+    parser.add_argument('--directory-username', help='username for the directory service')
+    parser.add_argument('--directory-password', help='password for the directory service')
 
     return {k: v for k, v in vars(parser.parse_args()).items() if v is not None}
 
