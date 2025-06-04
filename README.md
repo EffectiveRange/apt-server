@@ -110,7 +110,7 @@ architectures = amd64, arm64, armhf
 distributions = bullseye, bookworm
 repository_dir = /etc/apt-repo
 deb_package_dir = /opt/debs
-release_template = templates/Release.template
+release_template = templates/Release.j2
 
 [signature]
 private_key_id = C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3
@@ -129,7 +129,7 @@ Output:
 
 ```bash
 2025-03-15T16:56:23.740797Z [info     ] Using configuration file       [ConfigLoader] app_version=1.1.5 application=apt-server config_file=/etc/effective-range/apt-server/apt-server.conf hostname=Legion7iPro
-2025-03-15T16:56:23.742358Z [info     ] Started apt-server             [AptServerApp] app_version=1.1.5 application=apt-server arguments={'log_level': 'info', 'log_file': '/var/log/effective-range/apt-server/apt-server.log', 'server_port': 9000, 'architectures': 'amd64, arm64, armhf', 'distributions': 'bullseye, bookworm', 'repository_dir': '/etc/apt-repo', 'deb_package_dir': '/tmp/packages', 'release_template': 'templates/Release.template', 'private_key_id': 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3', 'private_key_path': 'tests/keys/private-key.asc', 'private_key_pass': 'test1234', 'public_key_path': 'tests/keys/public-key.asc', 'config_file': '/etc/effective-range/apt-server/apt-server.conf'} hostname=Legion7iPro
+2025-03-15T16:56:23.742358Z [info     ] Started apt-server             [AptServerApp] app_version=1.1.5 application=apt-server arguments={'log_level': 'info', 'log_file': '/var/log/effective-range/apt-server/apt-server.log', 'server_port': 9000, 'architectures': 'amd64, arm64, armhf', 'distributions': 'bullseye, bookworm', 'repository_dir': '/etc/apt-repo', 'deb_package_dir': '/tmp/packages', 'release_template': 'templates/Release.j2', 'private_key_id': 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3', 'private_key_path': 'tests/keys/private-key.asc', 'private_key_pass': 'test1234', 'public_key_path': 'tests/keys/public-key.asc', 'config_file': '/etc/effective-range/apt-server/apt-server.conf'} hostname=Legion7iPro
 2025-03-15T16:56:23.746562Z [info     ] Creating initial repository    [AptServer] app_version=1.1.5 application=apt-server hostname=Legion7iPro
 2025-03-15T16:56:23.747002Z [info     ] Removing existing link         [AptRepository] app_version=1.1.5 application=apt-server hostname=Legion7iPro target=/etc/apt-repo/pool/main
 2025-03-15T16:56:23.747415Z [info     ] Linked .deb package directory  [AptRepository] app_version=1.1.5 application=apt-server hostname=Legion7iPro source=/tmp/packages target=/etc/apt-repo/pool/main

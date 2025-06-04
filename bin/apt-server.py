@@ -42,7 +42,7 @@ def main() -> None:
     distributions = {dist.strip() for dist in config.get('distributions', 'stable').split(',')}
     repository_dir = _get_absolute_path(config.get('repository_dir', '/etc/apt-repo'))
     deb_package_dir = _get_absolute_path(config.get('deb_package_dir', '/opt/debs'))
-    release_template = _get_absolute_path(config.get('release_template', 'templates/Release.template'))
+    release_template = _get_absolute_path(config.get('release_template', 'templates/Release.j2'))
 
     private_key_id = config.get('private_key_id', 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3')
     private_key_path = _get_absolute_path(config.get('private_key_path', 'tests/keys/private-key.asc'))
@@ -63,8 +63,10 @@ def main() -> None:
 
     directory_username = config.get('directory_username', 'admin')
     directory_password = config.get('directory_password', 'admin')
+    directory_template = _get_absolute_path(config.get('directory_template', 'templates/directory.j2'))
     private_dirs = [path for path in repository_dir.joinpath('pool/main').glob('**/private') if path.is_dir()]
-    directory_config = DirectoryConfig(repository_dir, directory_username, directory_password, private_dirs)
+    directory_config = DirectoryConfig(repository_dir, directory_username, directory_password,
+                                       private_dirs, directory_template)
     directory_service = DirectoryService(web_server, directory_config)
     timer = ReusableTimer()
 
@@ -109,6 +111,7 @@ def _get_arguments() -> dict[str, Any]:
     parser.add_argument('--certificate-key-path', help='path of the server certificate key')
     parser.add_argument('--directory-username', help='username for the directory service')
     parser.add_argument('--directory-password', help='password for the directory service')
+    parser.add_argument('--directory-template', help='directory template file to use')
 
     return {k: v for k, v in vars(parser.parse_args()).items() if v is not None}
 

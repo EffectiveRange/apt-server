@@ -20,7 +20,7 @@ APPLICATION_NAME = 'apt-server'
 ARCHITECTURE = 'amd64'
 DISTRIBUTION = 'stable'
 PACKAGE_DIR = Path(f'{TEST_RESOURCE_ROOT}/test-debs')
-TEMPLATE_PATH = Path(f'{TEST_RESOURCE_ROOT}/../templates/Release.template')
+TEMPLATE_PATH = Path(f'{TEST_RESOURCE_ROOT}/../templates/Release.j2')
 
 
 class AptRepositoryTest(TestCase):
@@ -145,7 +145,7 @@ class AptRepositoryTest(TestCase):
     def test_release_file_generated(self):
         # Given
         expected_release = render_template_file(
-            f'{RESOURCE_ROOT}/templates/Release.template',
+            f'{RESOURCE_ROOT}/templates/Release.j2',
             {
                 'origin': APPLICATION_NAME,
                 'label': APPLICATION_NAME,
@@ -180,7 +180,7 @@ class AptRepositoryTest(TestCase):
         create_test_packages(PACKAGE_DIR, 'bookworm')
 
         expected_release_bullseye = render_template_file(
-            f'{RESOURCE_ROOT}/templates/Release.template',
+            f'{RESOURCE_ROOT}/templates/Release.j2',
             {
                 'origin': APPLICATION_NAME,
                 'label': APPLICATION_NAME,
@@ -190,7 +190,7 @@ class AptRepositoryTest(TestCase):
             },
         ).splitlines()
         expected_release_bookworm = render_template_file(
-            f'{RESOURCE_ROOT}/templates/Release.template',
+            f'{RESOURCE_ROOT}/templates/Release.j2',
             {
                 'origin': APPLICATION_NAME,
                 'label': APPLICATION_NAME,
