@@ -6,6 +6,7 @@ import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 from urllib.parse import quote
 
 from context_logger import get_logger
@@ -91,45 +92,18 @@ class DirectoryService(IDirectoryService):
         entries = []
 
         for item in sorted(os.listdir(full_path)):
-            item_path = os.path.join(full_path, item)
-            is_dir = os.path.isdir(item_path)
-            stat = os.stat(item_path)
-            size = '-' if is_dir else stat.st_size
-            date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(stat.st_mtime))
-            href = '/' + quote(os.path.join(path, item).replace(os.sep, '/'))
-            if is_dir:
-                href += '/'
-            entries.append({
-                'name': item + ('/' if is_dir else ''),
-                'href': href,
-                'is_parent': False,
-                'is_dir': is_dir,
-                'date': date,
-                'size': '-' if is_dir else f'{size:,} bytes',
-                'sort_key': {
-                    'name': item.lower(),
-                    'date': date,
-                    'size': 0 if is_dir else size
-                }[sort_by]
-            })
+            entries.append(self._create_child_entry(full_path, path, item, sort_by))
 
-        entries.sort(key=lambda x: x['sort_key'], reverse=reverse)  # type: ignore
+        entries.sort(key=lambda x: x['sort_key'], reverse=reverse)
 
         listing.extend(entries)
 
-        breadcrumbs = []
-        path_accum = ''
-        for part in path.split('/') if path else []:
-            path_accum = os.path.join(path_accum, part)
-            breadcrumbs.append({
-                'name': part,
-                'href': '/' + quote(path_accum.replace(os.sep, '/')) + '/'
-            })
+        breadcrumbs = self._create_breadcrumbs(path)
 
-        return Response(render_template('directory.j2', items=listing, path=path, breadcrumbs=breadcrumbs,
-                                        sort_by=sort_by, reverse=reverse))
+        return Response(render_template(self._config.html_template.name, items=listing, path=path,
+                                        breadcrumbs=breadcrumbs, sort_by=sort_by, reverse=reverse))
 
-    def _create_parent_entry(self, path: str) -> dict:
+    def _create_parent_entry(self, path: str) -> dict[str, Any]:
         parent_path = '/' + quote(str(Path(path).parent))
         return {
             'name': '../',
@@ -139,3 +113,37 @@ class DirectoryService(IDirectoryService):
             'size': '',
             'sort_key': ''
         }
+
+    def _create_child_entry(self, full_path: Path, path: str, item: str, sort_by: str) -> dict[str, Any]:
+        item_path = os.path.join(full_path, item)
+        is_dir = os.path.isdir(item_path)
+        stat = os.stat(item_path)
+        size = '-' if is_dir else stat.st_size
+        date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(stat.st_mtime))
+        href = '/' + quote(os.path.join(path, item).replace(os.sep, '/'))
+        if is_dir:
+            href += '/'
+        return {
+            'name': item + ('/' if is_dir else ''),
+            'href': href,
+            'is_parent': False,
+            'is_dir': is_dir,
+            'date': date,
+            'size': '-' if is_dir else f'{size:,} bytes',
+            'sort_key': {
+                'name': item.lower(),
+                'date': date,
+                'size': 0 if is_dir else size
+            }[sort_by]
+        }
+
+    def _create_breadcrumbs(self, path: str) -> list[dict[str, str]]:
+        breadcrumbs = []
+        path_accum = ''
+        for part in path.split('/') if path else []:
+            path_accum = os.path.join(path_accum, part)
+            breadcrumbs.append({
+                'name': part,
+                'href': '/' + quote(path_accum.replace(os.sep, '/')) + '/'
+            })
+        return breadcrumbs
