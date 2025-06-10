@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext, PROTOCOL_TLS_SERVER
 from threading import Thread, Lock
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from context_logger import get_logger
 from flask import Flask
@@ -20,8 +20,8 @@ log = get_logger('WebServer')
 @dataclass
 class ServerConfig:
     listen: list[str]
-    cert: Optional[Path]
-    key: Optional[Path]
+    cert: Optional[Path] = None
+    key: Optional[Path] = None
 
 
 class IWebServer(object):
@@ -42,9 +42,9 @@ class WebServer(IWebServer, FileSystemEventHandler):
         self._observer = observer
         self._config = config
         self._app = Flask(__name__)
-        self._server: MultiSocketServer | BaseWSGIServer | None = None
+        self._server: Union[MultiSocketServer, BaseWSGIServer, None] = None
 
-        self._thread = Thread(target=self._start_server)
+        self._thread: Union[Thread, None] = None
         self._lock = Lock()
 
         if self._config.cert and self._config.key:
@@ -82,9 +82,8 @@ class WebServer(IWebServer, FileSystemEventHandler):
     def _start_server(self) -> None:
         try:
             log.info('Starting server')
-            self._create_server()
-            if self._server:
-                self._server.run()
+            self._server = self._create_server()
+            self._server.run()
         except Exception as error:
             log.info('Shutdown', reason=error)
 
@@ -92,31 +91,32 @@ class WebServer(IWebServer, FileSystemEventHandler):
         log.info('Stopping server')
         if self._server:
             self._server.close()
-        self._thread.join(1)
+            self._server = None
+        if self._thread:
+            self._thread.join(1)
+            self._thread = None
 
-    def _create_server(self) -> None:
+    def _create_server(self) -> Union[MultiSocketServer, BaseWSGIServer]:
         listen = ' '.join(self._config.listen)
-        self._server = create_server(self._app, listen=listen)
+        server = create_server(self._app, listen=listen)
 
         if self._config.cert and self._config.key:
-            self._create_ssl_socket(self._config.cert, self._config.key)
+            self._create_ssl_socket(server, self._config.cert, self._config.key)
 
-    def _create_ssl_socket(self, cert: Path, key: Path) -> None:
+        return server
+
+    def _create_ssl_socket(self, web_server: Union[MultiSocketServer, BaseWSGIServer], cert: Path, key: Path) -> None:
         if not cert.is_file() or not key.is_file():
-            log.error('Certificate or key file not found', cert=cert, key=key)
+            log.error('Certificate or key file not found', cert=str(cert), key=str(key))
             return
 
         wsgi_servers: list[BaseWSGIServer] = []
 
-        if isinstance(self._server, MultiSocketServer):
-            if isinstance(self._server.map, dict):
-                wsgi_servers = [server for server in self._server.map.values() if isinstance(server, BaseWSGIServer)]
-        elif isinstance(self._server, BaseWSGIServer):
-            wsgi_servers = [self._server]
-
-        if not wsgi_servers:
-            log.error('No WSGI servers found to wrap with SSL')
-            return
+        if isinstance(web_server, MultiSocketServer):
+            if isinstance(web_server.map, dict):
+                wsgi_servers = [server for server in web_server.map.values() if isinstance(server, BaseWSGIServer)]
+        elif isinstance(web_server, BaseWSGIServer):
+            wsgi_servers = [web_server]
 
         for server in wsgi_servers:
             if server.socket:
