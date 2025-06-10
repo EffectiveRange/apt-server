@@ -57,8 +57,8 @@ def main() -> None:
         APPLICATION_NAME, architectures, distributions, repository_dir, deb_package_dir, release_template
     )
 
-    certificate_path = _get_absolute_path(config.get('certificate_path', 'tests/keys/cert.pem'))
-    certificate_key_path = _get_absolute_path(config.get('certificate_key_path', 'tests/keys/cert_key.pem'))
+    certificate_path = _get_absolute_path(config.get('certificate_path', 'tests/keys/localhost.crt'))
+    certificate_key_path = _get_absolute_path(config.get('certificate_key_path', 'tests/keys/localhost.key'))
     server_config = ServerConfig([f'{server_host}:{server_port}'], certificate_path, certificate_key_path)
     web_server = WebServer(Observer(), server_config)
 
