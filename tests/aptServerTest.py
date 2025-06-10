@@ -39,6 +39,7 @@ class AptServerTest(TestCase):
             observer.start.assert_called_once()
 
         observer.stop.assert_called_once()
+        timer.cancel.assert_called_once()
         directory_service.shutdown.assert_called_once()
 
     def test_repository_recreated_when_new_package_added(self):

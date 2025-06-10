@@ -55,6 +55,7 @@ class AptServer(FileSystemEventHandler):
 
     def shutdown(self) -> None:
         self._observer.stop()
+        self._timer.cancel()
         Thread(target=self._directory_service.shutdown).start()
         self._event.set()
 

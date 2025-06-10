@@ -33,7 +33,6 @@ class AptSignerIntegrationTest(TestCase):
 
     def setUp(self):
         print()
-        delete_directory(REPOSITORY_DIR)
 
     def test_release_file_signed(self):
         # Given
