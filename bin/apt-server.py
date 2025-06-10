@@ -37,7 +37,9 @@ def main() -> None:
     log.info(f'Started {APPLICATION_NAME}')
 
     server_host = config.get('server_host', '*')
-    server_port = int(config.get('server_port', 8443))
+    server_port = int(config.get('server_port', 9000))
+    server_scheme = config.get('server_scheme', 'http')
+    server_prefix = config.get('server_prefix', '')
 
     architectures = {arch.strip() for arch in config['architectures'].split(',')}
     distributions = {dist.strip() for dist in config.get('distributions', 'stable').split(',')}
@@ -57,10 +59,8 @@ def main() -> None:
         APPLICATION_NAME, architectures, distributions, repository_dir, deb_package_dir, release_template
     )
 
-    certificate_path = _get_absolute_path(config.get('certificate_path', 'tests/keys/localhost.crt'))
-    certificate_key_path = _get_absolute_path(config.get('certificate_key_path', 'tests/keys/localhost.key'))
-    server_config = ServerConfig([f'{server_host}:{server_port}'], certificate_path, certificate_key_path)
-    web_server = WebServer(Observer(), server_config)
+    server_config = ServerConfig([f'{server_host}:{server_port}'], server_scheme, server_prefix)
+    web_server = WebServer(server_config)
 
     directory_username = config.get('directory_username', 'admin')
     directory_password = config.get('directory_password', 'admin')
@@ -95,8 +95,10 @@ def _get_arguments() -> dict[str, Any]:
     parser.add_argument('-f', '--log-file', help='log file path')
     parser.add_argument('-l', '--log-level', help='logging level')
 
-    parser.add_argument('--server-host', help='repository server host to listen on')
-    parser.add_argument('--server-port', help='repository server port to listen on', type=int)
+    parser.add_argument('--server-host', help='server host to listen on')
+    parser.add_argument('--server-port', help='server port to listen on', type=int)
+    parser.add_argument('--server-scheme', help='server URL scheme')
+    parser.add_argument('--server-prefix', help='server URL prefix')
 
     parser.add_argument('--architectures', help='served package architectures (comma separated)')
     parser.add_argument('--distributions', help='supported distributions (comma separated)')
@@ -109,8 +111,6 @@ def _get_arguments() -> dict[str, Any]:
     parser.add_argument('--private-key-pass', help='passphrase of key used for signing')
     parser.add_argument('--public-key-path', help='path of key used for verification')
 
-    parser.add_argument('--certificate-path', help='path of the server certificate')
-    parser.add_argument('--certificate-key-path', help='path of the server certificate key')
     parser.add_argument('--directory-username', help='username for the directory service')
     parser.add_argument('--directory-password', help='password for the directory service')
     parser.add_argument('--directory-template', help='directory template file to use')
