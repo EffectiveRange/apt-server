@@ -34,8 +34,9 @@ def main() -> None:
 
     _update_logging(config)
 
-    log.info(f'Started {APPLICATION_NAME}', arguments=config)
+    log.info(f'Started {APPLICATION_NAME}')
 
+    server_host = config.get('server_host', '*')
     server_port = int(config.get('server_port', 8443))
 
     architectures = {arch.strip() for arch in config['architectures'].split(',')}
@@ -58,7 +59,7 @@ def main() -> None:
 
     certificate_path = _get_absolute_path(config.get('certificate_path', 'tests/keys/cert.pem'))
     certificate_key_path = _get_absolute_path(config.get('certificate_key_path', 'tests/keys/cert_key.pem'))
-    server_config = ServerConfig('*', server_port, certificate_path, certificate_key_path)
+    server_config = ServerConfig([f'{server_host}:{server_port}'], certificate_path, certificate_key_path)
     web_server = WebServer(Observer(), server_config)
 
     directory_username = config.get('directory_username', 'admin')
@@ -94,6 +95,7 @@ def _get_arguments() -> dict[str, Any]:
     parser.add_argument('-f', '--log-file', help='log file path')
     parser.add_argument('-l', '--log-level', help='logging level')
 
+    parser.add_argument('--server-host', help='repository server host to listen on')
     parser.add_argument('--server-port', help='repository server port to listen on', type=int)
 
     parser.add_argument('--architectures', help='served package architectures (comma separated)')

@@ -84,11 +84,6 @@ class DirectoryService(IDirectoryService):
         sort_by = request.args.get('sort', 'name')
         reverse = request.args.get('desc', '0') == '1'
 
-        listing = []
-
-        if path:
-            listing.append(self._create_parent_entry(path))
-
         entries = []
 
         for item in sorted(os.listdir(full_path)):
@@ -96,18 +91,19 @@ class DirectoryService(IDirectoryService):
 
         entries.sort(key=lambda x: x['sort_key'], reverse=reverse)
 
-        listing.extend(entries)
+        if path:
+            entries.insert(0, self._create_parent_entry(path))
 
         breadcrumbs = self._create_breadcrumbs(path)
 
-        return Response(render_template(self._config.html_template.name, items=listing, path=path,
+        return Response(render_template(self._config.html_template.name, items=entries, path=path,
                                         breadcrumbs=breadcrumbs, sort_by=sort_by, reverse=reverse))
 
     def _create_parent_entry(self, path: str) -> dict[str, Any]:
-        parent_path = '/' + quote(str(Path(path).parent))
+        parent_path = '/' + quote(str(Path(path).parent)) + '/'
         return {
             'name': '../',
-            'href': parent_path + '/',
+            'href': parent_path,
             'is_parent': True,
             'date': '',
             'size': '',
@@ -118,7 +114,7 @@ class DirectoryService(IDirectoryService):
         item_path = os.path.join(full_path, item)
         is_dir = os.path.isdir(item_path)
         stat = os.stat(item_path)
-        size = '-' if is_dir else stat.st_size
+        size = stat.st_size
         date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(stat.st_mtime))
         href = '/' + quote(os.path.join(path, item).replace(os.sep, '/'))
         if is_dir:
