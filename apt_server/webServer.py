@@ -28,6 +28,9 @@ class IWebServer(object):
     def shutdown(self) -> None:
         raise NotImplementedError()
 
+    def is_running(self) -> bool:
+        raise NotImplementedError()
+
     def get_app(self) -> Flask:
         raise NotImplementedError()
 
@@ -64,6 +67,10 @@ class WebServer(IWebServer):
             if self._thread:
                 self._thread.join(1)
                 self._thread = None
+
+    def is_running(self) -> bool:
+        with self._lock:
+            return self._thread is not None and self._thread.is_alive()
 
     def get_app(self) -> Flask:
         return self._app

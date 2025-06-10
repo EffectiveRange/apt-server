@@ -46,7 +46,7 @@ class AptServerIntegrationTest(TestCase):
 
         with AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, PACKAGE_DIR, 0) as apt_server:
             Thread(target=apt_server.run).start()
-            wait_for_condition(1, lambda: web_server._thread is not None)
+            wait_for_condition(1, lambda: web_server.is_running())
 
             # When
             response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/dists/stable/Release')
@@ -70,7 +70,7 @@ class AptServerIntegrationTest(TestCase):
 
             self.assertTrue(all_matches)
 
-        wait_for_condition(1, lambda: web_server._thread is None)
+        wait_for_condition(1, lambda: not web_server.is_running())
 
     def test_http_server_verification_key_mapping(self):
         # Given
@@ -78,7 +78,7 @@ class AptServerIntegrationTest(TestCase):
 
         with AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, PACKAGE_DIR, 0) as apt_server:
             Thread(target=apt_server.run).start()
-            wait_for_condition(1, lambda: web_server._thread is not None)
+            wait_for_condition(1, lambda: web_server.is_running())
 
             # When
             response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/dists/stable/public.key')
@@ -91,7 +91,7 @@ class AptServerIntegrationTest(TestCase):
 
                 self.assertEqual(expected_content, actual_content)
 
-        wait_for_condition(1, lambda: web_server._thread is None)
+        wait_for_condition(1, lambda: not web_server.is_running())
 
     def test_http_server_package_file_mapping(self):
         # Given
@@ -99,7 +99,7 @@ class AptServerIntegrationTest(TestCase):
 
         with AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, PACKAGE_DIR, 0) as apt_server:
             Thread(target=apt_server.run).start()
-            wait_for_condition(1, lambda: web_server._thread is not None)
+            wait_for_condition(1, lambda: web_server.is_running())
 
             response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/dists/stable/main/binary-amd64/Packages')
             self.assertEqual(200, response.status_code)
@@ -117,7 +117,7 @@ class AptServerIntegrationTest(TestCase):
 
                 self.assertEqual(expected_content, actual_content)
 
-        wait_for_condition(1, lambda: web_server._thread is None)
+        wait_for_condition(1, lambda: not web_server.is_running())
 
 
 def create_components():

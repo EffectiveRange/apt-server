@@ -26,9 +26,9 @@ class ApiServerTest(TestCase):
             web_server.start()
 
             # Then
-            wait_for_condition(1, lambda: web_server._thread is not None)
+            wait_for_condition(1, lambda: web_server.is_running())
 
-        wait_for_condition(1, lambda: web_server._thread is None)
+        wait_for_condition(1, lambda: not web_server.is_running())
 
     def test_returns_200(self):
         # Given
@@ -42,7 +42,7 @@ class ApiServerTest(TestCase):
 
             web_server.start()
 
-            wait_for_condition(1, lambda: web_server._thread is not None)
+            wait_for_condition(1, lambda: web_server.is_running())
 
             client = web_server._app.test_client()
 
