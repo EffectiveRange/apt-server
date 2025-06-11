@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="EN">
+<head>
+    <title>Index of /{{ path }}</title>
+    <style>
+        body { font-family: sans-serif; }
+        table { width: 100%; border-collapse: collapse; }
+
+        th, td { text-align: left; padding: 4px 8px; }
+        th.name, td.name { width: 50%; }
+        th.date, td.date { width: 25%; white-space: nowrap; }
+        th.size, td.size { width: 25%; text-align: right; white-space: nowrap; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        th { border-bottom: 1px solid #ccc; }
+
+        a { text-decoration: none; color: black; }
+        a:visited { color: black; }
+        a:hover { text-decoration: underline; color: blue; }
+    </style>
+</head>
+<body>
+<h1>Index of /{{ path }}</h1>
+<div class="breadcrumbs">
+    <a href="/">root</a>/
+    {% for crumb in breadcrumbs %}
+    <a href="{{ crumb.href }}">{{ crumb.name }}</a>{% if not loop.last %}/{% endif %}
+    {% endfor %}
+</div>
+<table>
+    <tr>
+        <th onclick="sort('name')">Name {% if sort_by == 'name' %}{{ '↓' if reverse else '↑' }}{% endif %}</th>
+        <th onclick="sort('date')">Date {% if sort_by == 'date' %}{{ '↓' if reverse else '↑' }}{% endif %}</th>
+        <th onclick="sort('size')">Size {% if sort_by == 'size' %}{{ '↓' if reverse else '↑' }}{% endif %}</th>
+    </tr>
+    {% for item in items %}
+    <tr>
+        <td class="name"><a href="{{ item.href }}">{% if item.is_parent %}↩️{% else %}
+            {% if item.is_dir %}📁{% else %}📄{% endif %}{% endif %} {{ item.name }}</a></td>
+        <td class="date">{{ item.date }}</td>
+        <td class="size">{{ item.size }}</td>
+    </tr>
+    {% endfor %}
+</table>
+<script>
+    function sort(by) {
+        const url = new URL(window.location.href);
+        const current = url.searchParams.get('sort') || 'name';
+        const desc = url.searchParams.get('desc') === '1';
+        if (current === by) {
+            url.searchParams.set('desc', desc ? '0' : '1');
+        } else {
+            url.searchParams.set('sort', by);
+            url.searchParams.set('desc', '0');
+        }
+        window.location.href = url.toString();
+    }
+</script>
+</body>
+</html>

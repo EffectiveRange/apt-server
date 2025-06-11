@@ -1,32 +1,32 @@
 import unittest
-from functools import partial
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer, HTTPServer
 from importlib.metadata import version
 from pathlib import Path
 from threading import Thread
 from unittest import TestCase
 
 import requests
-from common_utility import delete_directory, render_template_file
+from common_utility import delete_directory, render_template_file, ReusableTimer
 from context_logger import setup_logging
 from gnupg import GPG
 from test_utility import wait_for_condition, compare_lines
 from watchdog.observers import Observer
 
 from apt_repository import ReleaseSigner, LinkedPoolAptRepository, GpgKey
-from apt_server import AptServer
+from apt_server import AptServer, DirectoryService, WebServer, ServerConfig, DirectoryConfig, AptServerConfig
 from tests import create_test_packages, TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR
 
 APPLICATION_NAME = 'apt-server'
 ARCHITECTURE = 'amd64'
 DISTRIBUTION = 'stable'
 PACKAGE_DIR = Path(f'{TEST_RESOURCE_ROOT}/test-debs')
-TEMPLATE_PATH = Path(f'{RESOURCE_ROOT}/templates/Release.template')
+RELEASE_TEMPLATE_PATH = Path(f'{RESOURCE_ROOT}/templates/Release.j2')
 PRIVATE_KEY_PATH = Path(f'{TEST_RESOURCE_ROOT}/keys/private-key.asc')
 PUBLIC_KEY_PATH = Path(f'{TEST_RESOURCE_ROOT}/keys/public-key.asc')
 KEY_ID = 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3'
 PASSPHRASE = 'test1234'
 SERVER_HOST = 'http://127.0.0.1'
+SERVER_PORT = 9000
+DIRECTORY_TEMPLATE_PATH = Path(f'{RESOURCE_ROOT}/templates/directory.j2')
 
 
 class AptServerIntegrationTest(TestCase):
@@ -42,19 +42,19 @@ class AptServerIntegrationTest(TestCase):
 
     def test_http_server_repository_tree_mapping(self):
         # Given
-        apt_repository, apt_signer, web_server = create_components()
+        timer, apt_repository, apt_signer, web_server, directory_service, config = create_components()
 
-        with AptServer(apt_repository, apt_signer, Observer(), web_server, PACKAGE_DIR) as apt_server:
+        with AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, config) as apt_server:
             Thread(target=apt_server.run).start()
-            wait_for_initialization_completed(web_server)
+            wait_for_condition(3, lambda: web_server.is_running())
 
             # When
-            response = requests.get(f'{SERVER_HOST}:{web_server.server_port}/dists/stable/Release')
+            response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/dists/stable/Release')
 
             # Then
             self.assertEqual(200, response.status_code)
             expected_lines = render_template_file(
-                TEMPLATE_PATH,
+                RELEASE_TEMPLATE_PATH,
                 {
                     'origin': APPLICATION_NAME,
                     'label': APPLICATION_NAME,
@@ -70,16 +70,18 @@ class AptServerIntegrationTest(TestCase):
 
             self.assertTrue(all_matches)
 
+        wait_for_condition(1, lambda: not web_server.is_running())
+
     def test_http_server_verification_key_mapping(self):
         # Given
-        apt_repository, apt_signer, web_server = create_components()
+        timer, apt_repository, apt_signer, web_server, directory_service, config = create_components()
 
-        with AptServer(apt_repository, apt_signer, Observer(), web_server, PACKAGE_DIR) as apt_server:
+        with AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, config) as apt_server:
             Thread(target=apt_server.run).start()
-            wait_for_initialization_completed(web_server)
+            wait_for_condition(3, lambda: web_server.is_running())
 
             # When
-            response = requests.get(f'{SERVER_HOST}:{web_server.server_port}/dists/stable/public.key')
+            response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/dists/stable/public.key')
 
             # Then
             self.assertEqual(200, response.status_code)
@@ -89,21 +91,23 @@ class AptServerIntegrationTest(TestCase):
 
                 self.assertEqual(expected_content, actual_content)
 
+        wait_for_condition(1, lambda: not web_server.is_running())
+
     def test_http_server_package_file_mapping(self):
         # Given
-        apt_repository, apt_signer, web_server = create_components()
+        timer, apt_repository, apt_signer, web_server, directory_service, config = create_components()
 
-        with AptServer(apt_repository, apt_signer, Observer(), web_server, PACKAGE_DIR) as apt_server:
+        with AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, config) as apt_server:
             Thread(target=apt_server.run).start()
-            wait_for_initialization_completed(web_server)
+            wait_for_condition(3, lambda: web_server.is_running())
 
-            response = requests.get(f'{SERVER_HOST}:{web_server.server_port}/dists/stable/main/binary-amd64/Packages')
+            response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/dists/stable/main/binary-amd64/Packages')
             self.assertEqual(200, response.status_code)
             packages_lines = response.content.decode(response.apparent_encoding).splitlines()
             package_path = filter(lambda x: x.startswith('Filename:'), packages_lines).__next__().split(' ')[1]
 
             # When
-            response = requests.get(f'{SERVER_HOST}:{web_server.server_port}/{package_path}')
+            response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/{package_path}')
 
             # Then
             self.assertEqual(200, response.status_code)
@@ -113,23 +117,24 @@ class AptServerIntegrationTest(TestCase):
 
                 self.assertEqual(expected_content, actual_content)
 
+        wait_for_condition(1, lambda: not web_server.is_running())
+
 
 def create_components():
+    timer = ReusableTimer()
+    apt_repository = LinkedPoolAptRepository(
+        APPLICATION_NAME, {ARCHITECTURE}, {DISTRIBUTION}, REPOSITORY_DIR, PACKAGE_DIR, RELEASE_TEMPLATE_PATH
+    )
     gpg = GPG()
     public_key = GpgKey(KEY_ID, PUBLIC_KEY_PATH)
     private_key = GpgKey(KEY_ID, PRIVATE_KEY_PATH, PASSPHRASE)
     apt_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR, {DISTRIBUTION})
-    apt_repository = LinkedPoolAptRepository(
-        APPLICATION_NAME, {ARCHITECTURE}, {DISTRIBUTION}, REPOSITORY_DIR, PACKAGE_DIR, TEMPLATE_PATH
-    )
-    handler_class = partial(SimpleHTTPRequestHandler, directory=REPOSITORY_DIR)
-    web_server = ThreadingHTTPServer(('', 0), handler_class)
-
-    return apt_repository, apt_signer, web_server
-
-
-def wait_for_initialization_completed(web_server: HTTPServer):
-    wait_for_condition(5, lambda server: not server._BaseServer__is_shut_down.is_set(), web_server)
+    server_config = ServerConfig([f'*:{SERVER_PORT}'], 'http', '')
+    web_server = WebServer(server_config)
+    directory_config = DirectoryConfig(REPOSITORY_DIR, 'admin', 'admin', [], DIRECTORY_TEMPLATE_PATH)
+    directory_service = DirectoryService(web_server, directory_config)
+    config = AptServerConfig(PACKAGE_DIR, 0)
+    return timer, apt_repository, apt_signer, web_server, directory_service, config
 
 
 if __name__ == "__main__":

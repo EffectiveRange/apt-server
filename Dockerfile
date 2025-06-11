@@ -12,6 +12,6 @@ RUN venv/bin/pip install /etc/apt-server/*.whl
 COPY tests/keys/* /etc/apt-server/keys/
 
 # Start apt-server
-ENTRYPOINT venv/bin/python3 venv/bin/apt-server.py --server-port 80 \
+ENTRYPOINT venv/bin/python3 venv/bin/apt-server.py \
 --private-key-path /etc/apt-server/keys/private-key.asc \
 --public-key-path /etc/apt-server/keys/public-key.asc "$@"

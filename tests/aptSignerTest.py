@@ -13,7 +13,7 @@ from tests import TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR
 APPLICATION_NAME = 'apt-server'
 ARCHITECTURE = 'amd64'
 DISTRIBUTION = 'stable'
-TEMPLATE_PATH = f'{RESOURCE_ROOT}/templates/Release.template'
+TEMPLATE_PATH = f'{RESOURCE_ROOT}/templates/Release.j2'
 RELEASE_DIR = f'{REPOSITORY_DIR}/dists/stable'
 PRIVATE_KEY_PATH = f'{TEST_RESOURCE_ROOT}/keys/private-key.asc'
 PUBLIC_KEY_PATH = f'{TEST_RESOURCE_ROOT}/keys/public-key.asc'
