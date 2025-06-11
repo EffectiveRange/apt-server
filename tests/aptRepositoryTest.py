@@ -20,7 +20,7 @@ APPLICATION_NAME = 'apt-server'
 ARCHITECTURE = 'amd64'
 DISTRIBUTION = 'stable'
 PACKAGE_DIR = Path(f'{TEST_RESOURCE_ROOT}/test-debs')
-TEMPLATE_PATH = Path(f'{TEST_RESOURCE_ROOT}/../templates/Release.j2')
+TEMPLATE_PATH = Path(f'{RESOURCE_ROOT}/templates/Release.j2')
 
 
 class AptRepositoryTest(TestCase):

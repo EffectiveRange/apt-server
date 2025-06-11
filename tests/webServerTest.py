@@ -8,18 +8,18 @@ from test_utility import wait_for_condition
 from apt_server import WebServer, ServerConfig
 
 
-class ApiServerTest(TestCase):
+class WebServerTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        setup_logging('er-scarecrow-server', 'DEBUG', warn_on_overwrite=False)
+        setup_logging('apt-server', 'DEBUG', warn_on_overwrite=False)
 
     def setUp(self):
         print()
 
     def test_startup_and_shutdown(self):
         # Given
-        config = ServerConfig(['*:0'], 'http', '')
+        config = ServerConfig(['*:0'])
 
         with WebServer(config) as web_server:
             # When
@@ -32,7 +32,7 @@ class ApiServerTest(TestCase):
 
     def test_returns_200(self):
         # Given
-        config = ServerConfig(['*:0'], 'http', '')
+        config = ServerConfig(['*:0'])
 
         with WebServer(config) as web_server:
             # When

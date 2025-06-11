@@ -43,6 +43,12 @@ class DirectoryService(IDirectoryService):
 
         self._register_routes()
 
+    def __enter__(self) -> 'DirectoryService':
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self.shutdown()
+
     def start(self) -> None:
         self._web_server.start()
 

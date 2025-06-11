@@ -16,8 +16,8 @@ log = get_logger('WebServer')
 @dataclass
 class ServerConfig:
     listen: list[str]
-    url_scheme: str
-    url_prefix: str
+    url_scheme: str = 'http'
+    url_prefix: str = ''
 
 
 class IWebServer(object):

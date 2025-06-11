@@ -26,7 +26,7 @@ class AptServerTest(TestCase):
     def test_startup_and_shutdown(self):
         # Given
         deb_package_dir = Path('path/to/packages')
-        timer, apt_repository, apt_signer, observer, directory_service = create_mocks()
+        timer, apt_repository, apt_signer, observer, directory_service = create_components()
 
         with AptServer(timer, apt_repository, apt_signer, observer, directory_service, deb_package_dir) as apt_server:
             # When
@@ -46,7 +46,7 @@ class AptServerTest(TestCase):
     def test_repository_recreated_when_new_package_added(self):
         # Given
         deb_package_dir = Path('path/to/packages')
-        timer, apt_repository, apt_signer, observer, directory_service = create_mocks()
+        timer, apt_repository, apt_signer, observer, directory_service = create_components()
         apt_server = AptServer(timer, apt_repository, apt_signer, observer, directory_service, deb_package_dir)
         event = FileCreatedEvent(f'{deb_package_dir}/new-package.deb')
 
@@ -59,7 +59,7 @@ class AptServerTest(TestCase):
     def test_repository_recreated_when_package_renamed(self):
         # Given
         deb_package_dir = Path('path/to/packages')
-        timer, apt_repository, apt_signer, observer, directory_service = create_mocks()
+        timer, apt_repository, apt_signer, observer, directory_service = create_components()
         apt_server = AptServer(timer, apt_repository, apt_signer, observer, directory_service, deb_package_dir)
         event = FileMovedEvent(f'{deb_package_dir}/renamed-package.deb')
 
@@ -72,7 +72,7 @@ class AptServerTest(TestCase):
     def test_repository_recreated_when_package_removed(self):
         # Given
         deb_package_dir = Path('path/to/packages')
-        timer, apt_repository, apt_signer, observer, directory_service = create_mocks()
+        timer, apt_repository, apt_signer, observer, directory_service = create_components()
         apt_server = AptServer(timer, apt_repository, apt_signer, observer, directory_service, deb_package_dir)
         event = FileDeletedEvent(f'{deb_package_dir}/removed-package.deb')
 
@@ -85,7 +85,7 @@ class AptServerTest(TestCase):
     def test_no_operation_when_non_package_file_added(self):
         # Given
         deb_package_dir = Path('path/to/packages')
-        timer, apt_repository, apt_signer, observer, directory_service = create_mocks()
+        timer, apt_repository, apt_signer, observer, directory_service = create_components()
         apt_server = AptServer(timer, apt_repository, apt_signer, observer, directory_service, deb_package_dir)
         event = FileCreatedEvent(f'{deb_package_dir}/new-file.tar.gz')
 
@@ -97,7 +97,7 @@ class AptServerTest(TestCase):
         apt_signer.sign.assert_not_called()
 
 
-def create_mocks():
+def create_components():
     timer = MagicMock(spec=IReusableTimer)
     apt_repository = MagicMock(spec=AptRepository)
     apt_signer = MagicMock(spec=AptSigner)
