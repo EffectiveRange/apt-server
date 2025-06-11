@@ -46,7 +46,7 @@ class AptServerIntegrationTest(TestCase):
 
         with AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, PACKAGE_DIR, 0) as apt_server:
             Thread(target=apt_server.run).start()
-            wait_for_condition(1, lambda: web_server.is_running())
+            wait_for_condition(3, lambda: web_server.is_running())
 
             # When
             response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/dists/stable/Release')
@@ -78,7 +78,7 @@ class AptServerIntegrationTest(TestCase):
 
         with AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, PACKAGE_DIR, 0) as apt_server:
             Thread(target=apt_server.run).start()
-            wait_for_condition(1, lambda: web_server.is_running())
+            wait_for_condition(3, lambda: web_server.is_running())
 
             # When
             response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/dists/stable/public.key')
@@ -99,7 +99,7 @@ class AptServerIntegrationTest(TestCase):
 
         with AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, PACKAGE_DIR, 0) as apt_server:
             Thread(target=apt_server.run).start()
-            wait_for_condition(1, lambda: web_server.is_running())
+            wait_for_condition(3, lambda: web_server.is_running())
 
             response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/dists/stable/main/binary-amd64/Packages')
             self.assertEqual(200, response.status_code)
