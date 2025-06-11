@@ -12,7 +12,7 @@ from test_utility import wait_for_condition, compare_lines
 from watchdog.observers import Observer
 
 from apt_repository import ReleaseSigner, LinkedPoolAptRepository, GpgKey
-from apt_server import AptServer, DirectoryService, WebServer, ServerConfig, DirectoryConfig
+from apt_server import AptServer, DirectoryService, WebServer, ServerConfig, DirectoryConfig, AptServerConfig
 from tests import create_test_packages, TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR
 
 APPLICATION_NAME = 'apt-server'
@@ -42,9 +42,9 @@ class AptServerIntegrationTest(TestCase):
 
     def test_http_server_repository_tree_mapping(self):
         # Given
-        timer, apt_repository, apt_signer, web_server, directory_service = create_components()
+        timer, apt_repository, apt_signer, web_server, directory_service, config = create_components()
 
-        with AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, PACKAGE_DIR, 0) as apt_server:
+        with AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, config) as apt_server:
             Thread(target=apt_server.run).start()
             wait_for_condition(3, lambda: web_server.is_running())
 
@@ -74,9 +74,9 @@ class AptServerIntegrationTest(TestCase):
 
     def test_http_server_verification_key_mapping(self):
         # Given
-        timer, apt_repository, apt_signer, web_server, directory_service = create_components()
+        timer, apt_repository, apt_signer, web_server, directory_service, config = create_components()
 
-        with AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, PACKAGE_DIR, 0) as apt_server:
+        with AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, config) as apt_server:
             Thread(target=apt_server.run).start()
             wait_for_condition(3, lambda: web_server.is_running())
 
@@ -95,9 +95,9 @@ class AptServerIntegrationTest(TestCase):
 
     def test_http_server_package_file_mapping(self):
         # Given
-        timer, apt_repository, apt_signer, web_server, directory_service = create_components()
+        timer, apt_repository, apt_signer, web_server, directory_service, config = create_components()
 
-        with AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, PACKAGE_DIR, 0) as apt_server:
+        with AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, config) as apt_server:
             Thread(target=apt_server.run).start()
             wait_for_condition(3, lambda: web_server.is_running())
 
@@ -121,20 +121,20 @@ class AptServerIntegrationTest(TestCase):
 
 
 def create_components():
+    timer = ReusableTimer()
+    apt_repository = LinkedPoolAptRepository(
+        APPLICATION_NAME, {ARCHITECTURE}, {DISTRIBUTION}, REPOSITORY_DIR, PACKAGE_DIR, RELEASE_TEMPLATE_PATH
+    )
     gpg = GPG()
     public_key = GpgKey(KEY_ID, PUBLIC_KEY_PATH)
     private_key = GpgKey(KEY_ID, PRIVATE_KEY_PATH, PASSPHRASE)
     apt_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR, {DISTRIBUTION})
-    apt_repository = LinkedPoolAptRepository(
-        APPLICATION_NAME, {ARCHITECTURE}, {DISTRIBUTION}, REPOSITORY_DIR, PACKAGE_DIR, RELEASE_TEMPLATE_PATH
-    )
     server_config = ServerConfig([f'*:{SERVER_PORT}'], 'http', '')
     web_server = WebServer(server_config)
     directory_config = DirectoryConfig(REPOSITORY_DIR, 'admin', 'admin', [], DIRECTORY_TEMPLATE_PATH)
     directory_service = DirectoryService(web_server, directory_config)
-    timer = ReusableTimer()
-
-    return timer, apt_repository, apt_signer, web_server, directory_service
+    config = AptServerConfig(PACKAGE_DIR, 0)
+    return timer, apt_repository, apt_signer, web_server, directory_service, config
 
 
 if __name__ == "__main__":

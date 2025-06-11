@@ -17,7 +17,7 @@ from watchdog.observers import Observer
 
 from apt_repository.aptRepository import LinkedPoolAptRepository
 from apt_repository.aptSigner import ReleaseSigner, GpgKey
-from apt_server import AptServer, ServerConfig, WebServer, DirectoryConfig, DirectoryService
+from apt_server import AptServer, ServerConfig, WebServer, DirectoryConfig, DirectoryService, AptServerConfig
 
 APPLICATION_NAME = 'apt-server'
 
@@ -45,6 +45,7 @@ def main() -> None:
     distributions = {dist.strip() for dist in config.get('distributions', 'stable').split(',')}
     repository_dir = _get_absolute_path(config.get('repository_dir', '/etc/apt-repo'))
     deb_package_dir = _get_absolute_path(config.get('deb_package_dir', '/opt/debs'))
+    repo_create_delay = float(config.get('repo_create_delay', 10))
     release_template = _get_absolute_path(config.get('release_template', 'templates/Release.j2'))
 
     private_key_id = config.get('private_key_id', 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3')
@@ -71,7 +72,8 @@ def main() -> None:
     directory_service = DirectoryService(web_server, directory_config)
     timer = ReusableTimer()
 
-    apt_server = AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, deb_package_dir)
+    apt_server_config = AptServerConfig(deb_package_dir, repo_create_delay)
+    apt_server = AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, apt_server_config)
 
     def signal_handler(signum: int, frame: Any) -> None:
         log.info('Shutting down', signum=signum)
@@ -104,6 +106,7 @@ def _get_arguments() -> dict[str, Any]:
     parser.add_argument('--distributions', help='supported distributions (comma separated)')
     parser.add_argument('--repository-dir', help='repository root directory')
     parser.add_argument('--deb-package-dir', help='directory containing the debian packages')
+    parser.add_argument('--repo-create-delay', help='repository creation delay after package changes', type=float)
     parser.add_argument('--release-template', help='release template file to use')
 
     parser.add_argument('--private-key-id', help='ID of keys used for signing and verifying the signature')

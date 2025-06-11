@@ -69,10 +69,7 @@ class DirectoryService(IDirectoryService):
                 return Response('Unauthorized', 401, {'WWW-Authenticate': 'Basic realm="Private Area"'})
 
             if full_path.is_dir():
-                try:
-                    return self._list_directory(path, full_path)
-                except PermissionError:
-                    abort(403)
+                return self._list_directory(path, full_path)
             elif os.path.isfile(full_path):
                 return send_from_directory(self._config.root_dir, path, as_attachment=False, mimetype='text/plain')
             else:
