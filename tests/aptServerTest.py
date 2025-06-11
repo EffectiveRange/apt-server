@@ -34,7 +34,8 @@ class AptServerTest(TestCase):
 
             # Then
             wait_for_assertion(1, lambda: directory_service.start.assert_called_once())
-            timer.start.assert_called_once()
+            apt_repository.create.assert_called_once()
+            apt_signer.sign.assert_called_once()
             observer.schedule.assert_called_once_with(apt_server, str(deb_package_dir), recursive=True)
             observer.start.assert_called_once()
 
