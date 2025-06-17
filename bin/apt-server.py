@@ -66,7 +66,14 @@ def main() -> None:
     directory_username = config.get('directory_username', 'admin')
     directory_password = config.get('directory_password', 'admin')
     directory_template = _get_absolute_path(config.get('directory_template', 'templates/directory.j2'))
-    private_dirs = [path for path in repository_dir.joinpath('pool/main').glob('**/private') if path.is_dir()]
+    directory_private_patterns = config.get('directory_private')
+
+    private_dirs = []
+    if directory_private_patterns:
+        directory_private_patterns = directory_private_patterns.strip().split('\n')
+        for pattern in directory_private_patterns:
+            private_dirs.extend([path for path in repository_dir.joinpath('pool/main').glob(pattern) if path.is_dir()])
+
     directory_config = DirectoryConfig(repository_dir, directory_username, directory_password,
                                        private_dirs, directory_template)
     directory_service = DirectoryService(web_server, directory_config)
@@ -117,6 +124,7 @@ def _get_arguments() -> dict[str, Any]:
     parser.add_argument('--directory-username', help='username for the directory service')
     parser.add_argument('--directory-password', help='password for the directory service')
     parser.add_argument('--directory-template', help='directory template file to use')
+    parser.add_argument('--directory-private', help='private directory patterns (glob patterns)', nargs='*')
 
     return {k: v for k, v in vars(parser.parse_args()).items() if v is not None}
 
