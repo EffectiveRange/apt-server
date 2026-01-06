@@ -4,7 +4,7 @@
 
 import shutil
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 from context_logger import get_logger
 from gnupg import GPG, ImportResult, Sign, Verify
@@ -24,10 +24,23 @@ class GpgException(Exception):
 
 class GpgKey(object):
 
-    def __init__(self, key_id: str, key_path: Path, passphrase: Optional[str] = None) -> None:
+    def __init__(self, key_id: str, key_path: Path) -> None:
         self.id = key_id
         self.path = key_path
+
+
+class PrivateGpgKey(GpgKey):
+
+    def __init__(self, key_id: str, key_path: Path, passphrase: str) -> None:
+        super().__init__(key_id, key_path)
         self.passphrase = passphrase
+
+
+class PublicGpgKey(GpgKey):
+
+    def __init__(self, key_id: str, key_path: Path, public_name: str) -> None:
+        super().__init__(key_id, key_path)
+        self.public_name = public_name
 
 
 class AptSigner(object):
@@ -38,8 +51,8 @@ class AptSigner(object):
 
 class ReleaseSigner(AptSigner):
 
-    def __init__(self, gpg: GPG, public_key: GpgKey, private_key: GpgKey, repository_dir: Path, distributions: set[str]
-                 ) -> None:
+    def __init__(self, gpg: GPG, public_key: PublicGpgKey, private_key: PrivateGpgKey,
+                 repository_dir: Path, distributions: set[str]) -> None:
         self._repository_dir = repository_dir
         self._distributions = distributions
         self._public_key = public_key
@@ -48,13 +61,12 @@ class ReleaseSigner(AptSigner):
         self._initial_run = True
 
     def sign(self) -> None:
+        if self._initial_run:
+            self._add_public_key()
+            self._import_private_key()
+
         for distribution in self._distributions:
             dist_path = self._repository_dir / f'dists/{distribution}'
-
-            if self._initial_run:
-                self._add_public_key(dist_path)
-                self._import_private_key()
-
             release_path = dist_path / 'Release'
 
             self._update_release_file(release_path)
@@ -82,8 +94,8 @@ class ReleaseSigner(AptSigner):
                 # Append Release file
                 release_file.write(f'\n{signed_with}')
 
-    def _add_public_key(self, dist_path: Path) -> None:
-        target_path = dist_path / 'public.key'
+    def _add_public_key(self) -> None:
+        target_path = self._repository_dir / self._public_key.public_name
         shutil.copyfile(self._public_key.path, target_path)
         log.info('Added public key file', file=str(target_path))
 

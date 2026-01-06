@@ -16,7 +16,7 @@ from gnupg import GPG
 from watchdog.observers import Observer
 
 from apt_repository.aptRepository import LinkedPoolAptRepository
-from apt_repository.aptSigner import ReleaseSigner, GpgKey
+from apt_repository.aptSigner import ReleaseSigner, PublicGpgKey, PrivateGpgKey
 from apt_server import AptServer, ServerConfig, WebServer, DirectoryConfig, DirectoryService, AptServerConfig
 
 APPLICATION_NAME = 'apt-server'
@@ -52,9 +52,10 @@ def main() -> None:
     private_key_path = _get_absolute_path(config.get('private_key_path', 'tests/keys/private-key.asc'))
     private_key_pass = config.get('private_key_pass', 'test1234')
     public_key_path = _get_absolute_path(config.get('public_key_path', 'tests/keys/public-key.asc'))
+    public_key_name = config.get('public_key_name', 'aptserver.gpg.key')
 
-    public_key = GpgKey(private_key_id, public_key_path)
-    private_key = GpgKey(private_key_id, private_key_path, private_key_pass)
+    public_key = PublicGpgKey(private_key_id, public_key_path, public_key_name)
+    private_key = PrivateGpgKey(private_key_id, private_key_path, private_key_pass)
     apt_signer = ReleaseSigner(GPG(), public_key, private_key, repository_dir, distributions)
     apt_repository = LinkedPoolAptRepository(
         APPLICATION_NAME, architectures, distributions, repository_dir, deb_package_dir, release_template
@@ -120,6 +121,7 @@ def _get_arguments() -> dict[str, Any]:
     parser.add_argument('--private-key-path', help='path of key used for signing')
     parser.add_argument('--private-key-pass', help='passphrase of key used for signing')
     parser.add_argument('--public-key-path', help='path of key used for verification')
+    parser.add_argument('--public-key-name', help='name of the public key in the repository root')
 
     parser.add_argument('--directory-username', help='username for the directory service')
     parser.add_argument('--directory-password', help='password for the directory service')

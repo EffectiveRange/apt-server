@@ -9,7 +9,7 @@ from context_logger import setup_logging
 from gnupg import GPG
 
 from apt_repository.aptRepository import LinkedPoolAptRepository
-from apt_repository.aptSigner import ReleaseSigner, GpgKey
+from apt_repository.aptSigner import ReleaseSigner, PublicGpgKey, PrivateGpgKey
 from tests import create_test_packages, TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR
 
 APPLICATION_NAME = 'apt-server'
@@ -19,6 +19,7 @@ PACKAGE_DIR = Path(f'{TEST_RESOURCE_ROOT}/test-debs')
 TEMPLATE_PATH = Path(f'{RESOURCE_ROOT}/templates/Release.j2')
 PRIVATE_KEY_PATH = Path(f'{TEST_RESOURCE_ROOT}/keys/private-key.asc')
 PUBLIC_KEY_PATH = Path(f'{TEST_RESOURCE_ROOT}/keys/public-key.asc')
+PUBLIC_KEY_NAME = 'test.gpg.key'
 KEY_ID = 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3'
 PASSPHRASE = 'test1234'
 
@@ -61,10 +62,8 @@ class AptSignerIntegrationTest(TestCase):
         signature_file_path = f'{release_path}/Release.gpg'
         self.assertTrue(os.path.exists(signature_file_path))
 
-        with (
-            open(PUBLIC_KEY_PATH, 'rb') as public_key_file,
-            open(f'{release_path}/public.key', 'rb') as verification_key_file,
-        ):
+        with (open(PUBLIC_KEY_PATH, 'rb') as public_key_file,
+              open(f'{REPOSITORY_DIR}/{PUBLIC_KEY_NAME}', 'rb') as verification_key_file):
             self.assertEqual(public_key_file.read(), verification_key_file.read())
 
     def test_release_file_resigned(self):
@@ -94,8 +93,8 @@ class AptSignerIntegrationTest(TestCase):
 
 def create_components():
     gpg = GPG()
-    public_key = GpgKey(KEY_ID, PUBLIC_KEY_PATH)
-    private_key = GpgKey(KEY_ID, PRIVATE_KEY_PATH, PASSPHRASE)
+    public_key = PublicGpgKey(KEY_ID, PUBLIC_KEY_PATH, PUBLIC_KEY_NAME)
+    private_key = PrivateGpgKey(KEY_ID, PRIVATE_KEY_PATH, PASSPHRASE)
 
     return gpg, public_key, private_key
 
