@@ -11,7 +11,7 @@ from gnupg import GPG
 from test_utility import wait_for_condition, compare_lines
 from watchdog.observers import Observer
 
-from apt_repository import ReleaseSigner, LinkedPoolAptRepository, GpgKey
+from apt_repository import ReleaseSigner, LinkedPoolAptRepository, PublicGpgKey, PrivateGpgKey
 from apt_server import AptServer, DirectoryService, WebServer, ServerConfig, DirectoryConfig, AptServerConfig
 from tests import create_test_packages, TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR
 
@@ -22,6 +22,7 @@ PACKAGE_DIR = Path(f'{TEST_RESOURCE_ROOT}/test-debs')
 RELEASE_TEMPLATE_PATH = Path(f'{RESOURCE_ROOT}/templates/Release.j2')
 PRIVATE_KEY_PATH = Path(f'{TEST_RESOURCE_ROOT}/keys/private-key.asc')
 PUBLIC_KEY_PATH = Path(f'{TEST_RESOURCE_ROOT}/keys/public-key.asc')
+PUBLIC_KEY_NAME = 'test.gpg.key'
 KEY_ID = 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3'
 PASSPHRASE = 'test1234'
 SERVER_HOST = 'http://127.0.0.1'
@@ -81,7 +82,7 @@ class AptServerIntegrationTest(TestCase):
             wait_for_condition(3, lambda: web_server.is_running())
 
             # When
-            response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/dists/stable/public.key')
+            response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/{PUBLIC_KEY_NAME}')
 
             # Then
             self.assertEqual(200, response.status_code)
@@ -126,8 +127,8 @@ def create_components():
         APPLICATION_NAME, {ARCHITECTURE}, {DISTRIBUTION}, REPOSITORY_DIR, PACKAGE_DIR, RELEASE_TEMPLATE_PATH
     )
     gpg = GPG()
-    public_key = GpgKey(KEY_ID, PUBLIC_KEY_PATH)
-    private_key = GpgKey(KEY_ID, PRIVATE_KEY_PATH, PASSPHRASE)
+    public_key = PublicGpgKey(KEY_ID, PUBLIC_KEY_PATH, PUBLIC_KEY_NAME)
+    private_key = PrivateGpgKey(KEY_ID, PRIVATE_KEY_PATH, PASSPHRASE)
     apt_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR, {DISTRIBUTION})
     server_config = ServerConfig([f'*:{SERVER_PORT}'], 'http', '')
     web_server = WebServer(server_config)

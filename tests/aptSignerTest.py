@@ -7,7 +7,7 @@ from common_utility import delete_directory, create_file, render_template_file
 from context_logger import setup_logging
 from gnupg import GPG, Sign, Verify, ImportResult
 
-from apt_repository.aptSigner import ReleaseSigner, GpgKey, GpgException
+from apt_repository.aptSigner import ReleaseSigner, GpgException, PublicGpgKey, PrivateGpgKey
 from tests import TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR
 
 APPLICATION_NAME = 'apt-server'
@@ -17,6 +17,7 @@ TEMPLATE_PATH = f'{RESOURCE_ROOT}/templates/Release.j2'
 RELEASE_DIR = f'{REPOSITORY_DIR}/dists/stable'
 PRIVATE_KEY_PATH = f'{TEST_RESOURCE_ROOT}/keys/private-key.asc'
 PUBLIC_KEY_PATH = f'{TEST_RESOURCE_ROOT}/keys/public-key.asc'
+PUBLIC_KEY_NAME = 'test.gpg.key'
 KEY_ID = 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3'
 PASSPHRASE = 'test1234'
 
@@ -63,6 +64,10 @@ class AptSignerTest(TestCase):
         )
         gpg.verify_file.assert_called()
 
+        with (open(PUBLIC_KEY_PATH, 'rb') as public_key_file,
+              open(f'{REPOSITORY_DIR}/{PUBLIC_KEY_NAME}', 'rb') as verification_key_file):
+            self.assertEqual(public_key_file.read(), verification_key_file.read())
+
     def test_sign_when_key_is_imported(self):
         # Given
         gpg, public_key, private_key = create_components()
@@ -92,6 +97,10 @@ class AptSignerTest(TestCase):
             ]
         )
         gpg.verify_file.assert_called()
+
+        with (open(PUBLIC_KEY_PATH, 'rb') as public_key_file,
+              open(f'{REPOSITORY_DIR}/{PUBLIC_KEY_NAME}', 'rb') as verification_key_file):
+            self.assertEqual(public_key_file.read(), verification_key_file.read())
 
     def test_exception_raised_when_fail_to_import_key(self):
         # Given
@@ -187,8 +196,8 @@ def create_components(import_code=0, sign_codes=None, verify_codes=None):
     verify_result2.status = 'verified'
     gpg.verify_file.side_effect = [verify_result1, verify_result2]
 
-    public_key = GpgKey(KEY_ID, Path(PUBLIC_KEY_PATH))
-    private_key = GpgKey(KEY_ID, Path(PRIVATE_KEY_PATH), PASSPHRASE)
+    public_key = PublicGpgKey(KEY_ID, Path(PUBLIC_KEY_PATH), PUBLIC_KEY_NAME)
+    private_key = PrivateGpgKey(KEY_ID, Path(PRIVATE_KEY_PATH), PASSPHRASE)
 
     return gpg, public_key, private_key
 
