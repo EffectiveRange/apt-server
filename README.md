@@ -5,11 +5,13 @@
 | Name                             |    Stmts |     Miss |   Branch |   BrPart |   Cover |   Missing |
 |--------------------------------- | -------: | -------: | -------: | -------: | ------: | --------: |
 | apt\_repository/\_\_init\_\_.py  |        2 |        0 |        0 |        0 |    100% |           |
-| apt\_repository/aptRepository.py |      113 |        5 |       18 |        2 |     93% |47->52, 92-95, 170-171 |
-| apt\_repository/aptSigner.py     |       92 |        0 |       18 |        0 |    100% |           |
-| apt\_server/\_\_init\_\_.py      |        1 |        0 |        0 |        0 |    100% |           |
-| apt\_server/aptServer.py         |       51 |        2 |        2 |        0 |     96% |     81-82 |
-|                        **TOTAL** |  **259** |    **7** |   **38** |    **2** | **96%** |           |
+| apt\_repository/aptRepository.py |      109 |        5 |       18 |        2 |     93% |40->45, 85-88, 163-164 |
+| apt\_repository/aptSigner.py     |       99 |        0 |       18 |        0 |    100% |           |
+| apt\_server/\_\_init\_\_.py      |        3 |        0 |        0 |        0 |    100% |           |
+| apt\_server/aptServer.py         |       68 |        0 |        6 |        0 |    100% |           |
+| apt\_server/directoryService.py  |       82 |        0 |       18 |        0 |    100% |           |
+| apt\_server/webServer.py         |       52 |        3 |        4 |        2 |     91% |60, 70->exit, 85-86 |
+| **TOTAL**                        |  **415** |    **8** |   **64** |    **4** | **97%** |           |
 
 
 ## Setup coverage badge
