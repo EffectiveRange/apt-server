@@ -69,10 +69,13 @@ class DirectoryService(IDirectoryService):
                 return Response('Unauthorized', 401, {'WWW-Authenticate': 'Basic realm="Private Area"'})
 
             if full_path.is_dir():
+                log.debug('Listing directory', path=str(full_path))
                 return self._list_directory(path, full_path)
             elif os.path.isfile(full_path):
+                log.debug('Serving file', path=str(full_path))
                 return send_from_directory(self._config.root_dir, path, as_attachment=False, mimetype='text/plain')
             else:
+                log.debug('File or directory not found', path=str(full_path))
                 abort(404)
 
     def _authorize(self, full_path: Path) -> bool:
