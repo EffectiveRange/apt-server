@@ -40,6 +40,7 @@ def main() -> None:
     server_port = int(config.get('server_port', 9000))
     server_scheme = config.get('server_scheme', 'http')
     server_prefix = config.get('server_prefix', '')
+    server_conn_limit = int(config.get('server_conn_limit', 1000))
 
     architectures = {arch.strip() for arch in config['architectures'].split(',')}
     distributions = {dist.strip() for dist in config.get('distributions', 'stable').split(',')}
@@ -61,7 +62,7 @@ def main() -> None:
         APPLICATION_NAME, architectures, distributions, repository_dir, deb_package_dir, release_template
     )
 
-    server_config = ServerConfig([f'{server_host}:{server_port}'], server_scheme, server_prefix)
+    server_config = ServerConfig([f'{server_host}:{server_port}'], server_scheme, server_prefix, server_conn_limit)
     web_server = WebServer(server_config)
 
     directory_username = config.get('directory_username', 'admin')

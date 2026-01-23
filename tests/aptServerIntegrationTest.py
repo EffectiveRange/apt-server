@@ -50,7 +50,7 @@ class AptServerIntegrationTest(TestCase):
             wait_for_condition(3, lambda: web_server.is_running())
 
             # When
-            response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/dists/stable/Release')
+            response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/dists/stable/Release', timeout=0.1)
 
             # Then
             self.assertEqual(200, response.status_code)
@@ -82,7 +82,7 @@ class AptServerIntegrationTest(TestCase):
             wait_for_condition(3, lambda: web_server.is_running())
 
             # When
-            response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/{PUBLIC_KEY_NAME}')
+            response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/{PUBLIC_KEY_NAME}', timeout=0.1)
 
             # Then
             self.assertEqual(200, response.status_code)
@@ -102,13 +102,13 @@ class AptServerIntegrationTest(TestCase):
             Thread(target=apt_server.run).start()
             wait_for_condition(3, lambda: web_server.is_running())
 
-            response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/dists/stable/main/binary-amd64/Packages')
+            response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/dists/stable/main/binary-amd64/Packages', timeout=0.1)
             self.assertEqual(200, response.status_code)
             packages_lines = response.content.decode(response.apparent_encoding).splitlines()
             package_path = filter(lambda x: x.startswith('Filename:'), packages_lines).__next__().split(' ')[1]
 
             # When
-            response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/{package_path}')
+            response = requests.get(f'{SERVER_HOST}:{SERVER_PORT}/{package_path}', timeout=0.1)
 
             # Then
             self.assertEqual(200, response.status_code)
@@ -117,6 +117,41 @@ class AptServerIntegrationTest(TestCase):
                 actual_content = response.content
 
                 self.assertEqual(expected_content, actual_content)
+
+        wait_for_condition(1, lambda: not web_server.is_running())
+
+    def test_http_server_with_multiple_concurrent_requests(self):
+        # Given
+        timer, apt_repository, apt_signer, web_server, directory_service, config = create_components()
+
+        with AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, config) as apt_server:
+            Thread(target=apt_server.run).start()
+            wait_for_condition(3, lambda: web_server.is_running())
+            request_count = web_server._config.conn_limit - 4
+            timeout = 1
+            threads = []
+            responses = []
+
+            def send_request():
+                try:
+                    response = requests.get(
+                        f'{SERVER_HOST}:{SERVER_PORT}/pool/main/stable/hello-world_0.0.1-1_amd64.deb', timeout=timeout)
+                    responses.append(response)
+                except requests.exceptions.RequestException as e:
+                    print(f'Exception raised: {e}')
+
+            # When
+            for index in range(request_count):
+                thread = Thread(target=lambda: send_request())
+                threads.append(thread)
+                thread.start()
+
+            # Then
+            for thread in threads:
+                thread.join()
+            self.assertEqual(request_count, len(responses))
+            for response in responses:
+                self.assertEqual(200, response.status_code)
 
         wait_for_condition(1, lambda: not web_server.is_running())
 
@@ -130,7 +165,7 @@ def create_components():
     public_key = PublicGpgKey(KEY_ID, PUBLIC_KEY_PATH, PUBLIC_KEY_NAME)
     private_key = PrivateGpgKey(KEY_ID, PRIVATE_KEY_PATH, PASSPHRASE)
     apt_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR, {DISTRIBUTION})
-    server_config = ServerConfig([f'*:{SERVER_PORT}'], 'http', '')
+    server_config = ServerConfig([f'*:{SERVER_PORT}'], 'http', '', 100)
     web_server = WebServer(server_config)
     directory_config = DirectoryConfig(REPOSITORY_DIR, 'admin', 'admin', [], DIRECTORY_TEMPLATE_PATH)
     directory_service = DirectoryService(web_server, directory_config)

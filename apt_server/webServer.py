@@ -18,6 +18,7 @@ class ServerConfig:
     listen: list[str]
     url_scheme: str = 'http'
     url_prefix: str = ''
+    conn_limit: int = 1000
 
 
 class IWebServer(object):
@@ -38,11 +39,13 @@ class IWebServer(object):
 class WebServer(IWebServer):
 
     def __init__(self, config: ServerConfig) -> None:
+        self._config = config
         self._app = Flask(__name__)
         self._server = create_server(self._app,
                                      listen=' '.join(config.listen),
                                      url_scheme=config.url_scheme,
-                                     url_prefix=config.url_prefix)
+                                     url_prefix=config.url_prefix,
+                                     connection_limit=config.conn_limit)
         self._thread: Union[Thread, None] = None
         self._lock = Lock()
 
@@ -77,7 +80,7 @@ class WebServer(IWebServer):
 
     def _start_server(self) -> None:
         try:
-            log.info('Starting server')
+            log.info('Starting server', config=self._config)
             self._server.run()
         except Exception as error:
             log.info('Shutdown', reason=error)
