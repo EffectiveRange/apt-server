@@ -115,7 +115,9 @@ class DefaultDirectoryService(DirectoryService):
         for item in sorted(os.listdir(full_path)):
             entries.append(self._create_child_entry(full_path, path, item, sort_by))
 
-        entries.sort(key=lambda x: x['sort_key'], reverse=reverse)
+        entries.sort(
+            key=lambda x: x['sort_key'] if isinstance(x['sort_key'], tuple) else (str(x['sort_key'])), reverse=reverse
+        )
 
         if path:
             entries.insert(0, self._create_parent_entry(path))

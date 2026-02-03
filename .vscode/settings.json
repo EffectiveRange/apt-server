@@ -16,5 +16,6 @@
         "--config=setup.cfg"
     ],
     "python.analysis.typeCheckingMode": "standard",
-    "python.testing.pytestArgs": []
+    "python.testing.pytestArgs": [],
+    "makefile.configureOnOpen": false
 }
