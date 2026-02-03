@@ -2,16 +2,19 @@ import os
 import subprocess
 from pathlib import Path
 
-TEST_RESOURCE_ROOT = str(Path(os.path.dirname(__file__)).absolute())
+APPLICATION_NAME = 'debian-package-repository'
+TEST_RESOURCE_ROOT = Path(os.path.dirname(__file__)).absolute()
 REPOSITORY_DIR = Path(TEST_RESOURCE_ROOT).joinpath('test-repo').absolute()
-RESOURCE_ROOT = str(Path(TEST_RESOURCE_ROOT).parent.absolute())
+RESOURCE_ROOT = Path(TEST_RESOURCE_ROOT).parent.absolute()
+PACKAGE_DIR = TEST_RESOURCE_ROOT / 'test-debs'
+RELEASE_TEMPLATE_PATH = RESOURCE_ROOT / 'templates/Release.j2'
 
 
-def create_test_packages(package_dir: Path, distribution: str) -> None:
-    create_test_package(package_dir, distribution, 'amd64')
-    create_test_package(package_dir, distribution, 'arm64')
+def create_test_packages(package_dir: Path, distribution: str, component: str = 'main') -> None:
+    create_test_package(package_dir, distribution, component, 'amd64')
+    create_test_package(package_dir, distribution, component, 'arm64')
 
 
-def create_test_package(package_dir: Path, distribution: str, architecture: str) -> None:
-    target_dir = f'{package_dir}/{distribution}'
-    subprocess.call(['/bin/bash', f'{TEST_RESOURCE_ROOT}/package/create_package.sh', target_dir, architecture])
+def create_test_package(package_dir: Path, distribution: str, component: str, architecture: str) -> None:
+    target_dir = str(package_dir / distribution / component)
+    subprocess.call(['/bin/bash', f'{str(TEST_RESOURCE_ROOT)}/package/create_package.sh', target_dir, architecture])

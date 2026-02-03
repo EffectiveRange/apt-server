@@ -1,7 +1,7 @@
-[![CI](https://github.com/EffectiveRange/apt-server/actions/workflows/ci.yaml/badge.svg)](https://github.com/EffectiveRange/apt-server/actions/workflows/ci.yaml)
-[![Coverage badge](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/EffectiveRange/apt-server/python-coverage-comment-action-data/endpoint.json)](https://htmlpreview.github.io/?https://github.com/EffectiveRange/apt-server/blob/python-coverage-comment-action-data/htmlcov/index.html)
+[![CI](https://github.com/EffectiveRange/debian-package-repository/actions/workflows/ci.yaml/badge.svg)](https://github.com/EffectiveRange/debian-package-repository/actions/workflows/ci.yaml)
+[![Coverage badge](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/EffectiveRange/debian-package-repository/python-coverage-comment-action-data/endpoint.json)](https://htmlpreview.github.io/?https://github.com/EffectiveRange/debian-package-repository/blob/python-coverage-comment-action-data/htmlcov/index.html)
 
-# apt-server
+# debian-package-repository
 
 APT server with dynamic package pool handling. Dynamic behavior is achieved by listening file changes in package pool
 directory and on any .deb file change, the repository is updated and re-signed.
@@ -43,7 +43,7 @@ Clone the repository and install the package with apt.
 
 ```bash
 make package
-apt install ./apt-server_1.0.0_all.deb
+apt install ./debian-package-repository_1.0.0_all.deb
 ```
 
 ### From GitHub release
@@ -51,7 +51,7 @@ apt install ./apt-server_1.0.0_all.deb
 Download the latest release from the GitHub repository and install the package with apt.
 
 ```bash
-apt install ./apt-server_1.0.0_all.deb
+apt install ./debian-package-repository_1.0.0_all.deb
 ``` 
 
 ## Usage
@@ -59,14 +59,14 @@ apt install ./apt-server_1.0.0_all.deb
 ### Command line reference
 
 ```bash
-$ bin/apt-server.py --help
-usage: apt-server.py [-h] [-c CONFIG_FILE] [-f LOG_FILE] [-l LOG_LEVEL] [--server-port SERVER_PORT] [--architectures ARCHITECTURES] [--distributions DISTRIBUTIONS] [--repository-dir REPOSITORY_DIR] [--deb-package-dir DEB_PACKAGE_DIR] [--release-template RELEASE_TEMPLATE]
+$ bin/debian-package-repository.py --help
+usage: debian-package-repository.py [-h] [-c CONFIG_FILE] [-f LOG_FILE] [-l LOG_LEVEL] [--server-port SERVER_PORT] [--architectures ARCHITECTURES] [--distributions DISTRIBUTIONS] [--repository-dir REPOSITORY_DIR] [--deb-package-dir DEB_PACKAGE_DIR] [--release-template RELEASE_TEMPLATE]
                      [--private-key-id PRIVATE_KEY_ID] [--private-key-path PRIVATE_KEY_PATH] [--private-key-pass PRIVATE_KEY_PASS] [--public-key-path PUBLIC_KEY_PATH]
 
 options:
   -h, --help            show this help message and exit
   -c CONFIG_FILE, --config-file CONFIG_FILE
-                        configuration file (default: /etc/effective-range/apt-server/apt-server.conf)
+                        configuration file (default: /etc/effective-range/debian-package-repository/debian-package-repository.conf)
   -f LOG_FILE, --log-file LOG_FILE
                         log file path (default: None)
   -l LOG_LEVEL, --log-level LOG_LEVEL
@@ -95,12 +95,12 @@ options:
 
 ## Configuration
 
-Default configuration (config/apt-server.conf):
+Default configuration (config/debian-package-repository.conf):
 
 ```ini
 [logging]
 log_level = info
-log_file = /var/log/effective-range/apt-server/apt-server.log
+log_file = /var/log/effective-range/debian-package-repository/debian-package-repository.log
 
 [server]
 server_port = 9000
@@ -122,36 +122,36 @@ public_key_path = tests/keys/public-key.asc
 ### Example
 
 ```bash
-$ bin/apt-server.py
+$ bin/debian-package-repository.py
 ```
 
 Output:
 
 ```bash
-2025-03-15T16:56:23.740797Z [info     ] Using configuration file       [ConfigLoader] app_version=1.1.5 application=apt-server config_file=/etc/effective-range/apt-server/apt-server.conf hostname=Legion7iPro
-2025-03-15T16:56:23.742358Z [info     ] Started apt-server             [AptServerApp] app_version=1.1.5 application=apt-server arguments={'log_level': 'info', 'log_file': '/var/log/effective-range/apt-server/apt-server.log', 'server_port': 9000, 'architectures': 'amd64, arm64, armhf', 'distributions': 'bullseye, bookworm', 'repository_dir': '/etc/apt-repo', 'deb_package_dir': '/tmp/packages', 'release_template': 'templates/Release.j2', 'private_key_id': 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3', 'private_key_path': 'tests/keys/private-key.asc', 'private_key_pass': 'test1234', 'public_key_path': 'tests/keys/public-key.asc', 'config_file': '/etc/effective-range/apt-server/apt-server.conf'} hostname=Legion7iPro
-2025-03-15T16:56:23.746562Z [info     ] Creating initial repository    [AptServer] app_version=1.1.5 application=apt-server hostname=Legion7iPro
-2025-03-15T16:56:23.747002Z [info     ] Removing existing link         [AptRepository] app_version=1.1.5 application=apt-server hostname=Legion7iPro target=/etc/apt-repo/pool/main
-2025-03-15T16:56:23.747415Z [info     ] Linked .deb package directory  [AptRepository] app_version=1.1.5 application=apt-server hostname=Legion7iPro source=/tmp/packages target=/etc/apt-repo/pool/main
+2025-03-15T16:56:23.740797Z [info     ] Using configuration file       [ConfigLoader] app_version=1.1.5 application=debian-package-repository config_file=/etc/effective-range/debian-package-repository/debian-package-repository.conf hostname=Legion7iPro
+2025-03-15T16:56:23.742358Z [info     ] Started debian-package-repository             [AptServerApp] app_version=1.1.5 application=debian-package-repository arguments={'log_level': 'info', 'log_file': '/var/log/effective-range/debian-package-repository/debian-package-repository.log', 'server_port': 9000, 'architectures': 'amd64, arm64, armhf', 'distributions': 'bullseye, bookworm', 'repository_dir': '/etc/apt-repo', 'deb_package_dir': '/tmp/packages', 'release_template': 'templates/Release.j2', 'private_key_id': 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3', 'private_key_path': 'tests/keys/private-key.asc', 'private_key_pass': 'test1234', 'public_key_path': 'tests/keys/public-key.asc', 'config_file': '/etc/effective-range/debian-package-repository/debian-package-repository.conf'} hostname=Legion7iPro
+2025-03-15T16:56:23.746562Z [info     ] Creating initial repository    [AptServer] app_version=1.1.5 application=debian-package-repository hostname=Legion7iPro
+2025-03-15T16:56:23.747002Z [info     ] Removing existing link         [AptRepository] app_version=1.1.5 application=debian-package-repository hostname=Legion7iPro target=/etc/apt-repo/pool/main
+2025-03-15T16:56:23.747415Z [info     ] Linked .deb package directory  [AptRepository] app_version=1.1.5 application=debian-package-repository hostname=Legion7iPro source=/tmp/packages target=/etc/apt-repo/pool/main
 dpkg-scanpackages: info: Wrote 10 entries to output Packages file.
-2025-03-15T16:56:23.868021Z [info     ] Generated Packages file        [AptRepository] app_version=1.1.5 application=apt-server architecture=all distribution=bullseye file=/etc/apt-repo/dists/bullseye/main/binary-all/Packages hostname=Legion7iPro
+2025-03-15T16:56:23.868021Z [info     ] Generated Packages file        [AptRepository] app_version=1.1.5 application=debian-package-repository architecture=all distribution=bullseye file=/etc/apt-repo/dists/bullseye/main/binary-all/Packages hostname=Legion7iPro
 dpkg-scanpackages: info: Wrote 11 entries to output Packages file.
-2025-03-15T16:56:24.006407Z [info     ] Generated Packages file        [AptRepository] app_version=1.1.5 application=apt-server architecture=amd64 distribution=bullseye file=/etc/apt-repo/dists/bullseye/main/binary-amd64/Packages hostname=Legion7iPro
+2025-03-15T16:56:24.006407Z [info     ] Generated Packages file        [AptRepository] app_version=1.1.5 application=debian-package-repository architecture=amd64 distribution=bullseye file=/etc/apt-repo/dists/bullseye/main/binary-amd64/Packages hostname=Legion7iPro
 dpkg-scanpackages: info: Wrote 11 entries to output Packages file.
-2025-03-15T16:56:24.136043Z [info     ] Generated Packages file        [AptRepository] app_version=1.1.5 application=apt-server architecture=arm64 distribution=bullseye file=/etc/apt-repo/dists/bullseye/main/binary-arm64/Packages hostname=Legion7iPro
+2025-03-15T16:56:24.136043Z [info     ] Generated Packages file        [AptRepository] app_version=1.1.5 application=debian-package-repository architecture=arm64 distribution=bullseye file=/etc/apt-repo/dists/bullseye/main/binary-arm64/Packages hostname=Legion7iPro
 dpkg-scanpackages: info: Wrote 14 entries to output Packages file.
-2025-03-15T16:56:24.270599Z [info     ] Generated Packages file        [AptRepository] app_version=1.1.5 application=apt-server architecture=armhf distribution=bullseye file=/etc/apt-repo/dists/bullseye/main/binary-armhf/Packages hostname=Legion7iPro
-2025-03-15T16:56:24.273913Z [info     ] Generated Release file         [AptRepository] app_version=1.1.5 application=apt-server distribution=bullseye file=/etc/apt-repo/dists/bullseye/Release hostname=Legion7iPro
-2025-03-15T16:56:24.275394Z [info     ] Generated Release file         [AptRepository] app_version=1.1.5 application=apt-server distribution=bookworm file=/etc/apt-repo/dists/bookworm/Release hostname=Legion7iPro
-2025-03-15T16:56:24.275822Z [info     ] Signing initial repository     [AptServer] app_version=1.1.5 application=apt-server hostname=Legion7iPro
-2025-03-15T16:56:24.276210Z [info     ] Added public key file          [AptSigner] app_version=1.1.5 application=apt-server file=/etc/apt-repo/dists/bullseye/public.key hostname=Legion7iPro
-2025-03-15T16:56:24.692295Z [info     ] Created signed Release file    [AptSigner] app_version=1.1.5 application=apt-server file=/etc/apt-repo/dists/bullseye/InRelease hostname=Legion7iPro
-2025-03-15T16:56:25.096357Z [info     ] Created signature file         [AptSigner] app_version=1.1.5 application=apt-server file=/etc/apt-repo/dists/bullseye/Release.gpg hostname=Legion7iPro
-2025-03-15T16:56:25.504482Z [info     ] Created signed Release file    [AptSigner] app_version=1.1.5 application=apt-server file=/etc/apt-repo/dists/bookworm/InRelease hostname=Legion7iPro
-2025-03-15T16:56:25.913410Z [info     ] Created signature file         [AptSigner] app_version=1.1.5 application=apt-server file=/etc/apt-repo/dists/bookworm/Release.gpg hostname=Legion7iPro
-2025-03-15T16:56:25.914277Z [info     ] Watching directory for .deb file changes [AptServer] app_version=1.1.5 application=apt-server directory=/tmp/packages hostname=Legion7iPro
-2025-03-15T16:56:25.915716Z [info     ] Starting component             [AptServer] app_version=1.1.5 application=apt-server component=file-observer hostname=Legion7iPro
-2025-03-15T16:56:25.917301Z [info     ] Starting component             [AptServer] app_version=1.1.5 application=apt-server component=web-server hostname=Legion7iPro
+2025-03-15T16:56:24.270599Z [info     ] Generated Packages file        [AptRepository] app_version=1.1.5 application=debian-package-repository architecture=armhf distribution=bullseye file=/etc/apt-repo/dists/bullseye/main/binary-armhf/Packages hostname=Legion7iPro
+2025-03-15T16:56:24.273913Z [info     ] Generated Release file         [AptRepository] app_version=1.1.5 application=debian-package-repository distribution=bullseye file=/etc/apt-repo/dists/bullseye/Release hostname=Legion7iPro
+2025-03-15T16:56:24.275394Z [info     ] Generated Release file         [AptRepository] app_version=1.1.5 application=debian-package-repository distribution=bookworm file=/etc/apt-repo/dists/bookworm/Release hostname=Legion7iPro
+2025-03-15T16:56:24.275822Z [info     ] Signing initial repository     [AptServer] app_version=1.1.5 application=debian-package-repository hostname=Legion7iPro
+2025-03-15T16:56:24.276210Z [info     ] Added public key file          [AptSigner] app_version=1.1.5 application=debian-package-repository file=/etc/apt-repo/dists/bullseye/public.key hostname=Legion7iPro
+2025-03-15T16:56:24.692295Z [info     ] Created signed Release file    [AptSigner] app_version=1.1.5 application=debian-package-repository file=/etc/apt-repo/dists/bullseye/InRelease hostname=Legion7iPro
+2025-03-15T16:56:25.096357Z [info     ] Created signature file         [AptSigner] app_version=1.1.5 application=debian-package-repository file=/etc/apt-repo/dists/bullseye/Release.gpg hostname=Legion7iPro
+2025-03-15T16:56:25.504482Z [info     ] Created signed Release file    [AptSigner] app_version=1.1.5 application=debian-package-repository file=/etc/apt-repo/dists/bookworm/InRelease hostname=Legion7iPro
+2025-03-15T16:56:25.913410Z [info     ] Created signature file         [AptSigner] app_version=1.1.5 application=debian-package-repository file=/etc/apt-repo/dists/bookworm/Release.gpg hostname=Legion7iPro
+2025-03-15T16:56:25.914277Z [info     ] Watching directory for .deb file changes [AptServer] app_version=1.1.5 application=debian-package-repository directory=/tmp/packages hostname=Legion7iPro
+2025-03-15T16:56:25.915716Z [info     ] Starting component             [AptServer] app_version=1.1.5 application=debian-package-repository component=file-observer hostname=Legion7iPro
+2025-03-15T16:56:25.917301Z [info     ] Starting component             [AptServer] app_version=1.1.5 application=debian-package-repository component=web-server hostname=Legion7iPro
 ```
 
 ## Accessing the repository

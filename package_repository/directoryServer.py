@@ -4,13 +4,13 @@
 
 from dataclasses import dataclass
 from threading import Thread, Lock
-from typing import Any, Union
+from typing import Any
 
 from context_logger import get_logger
 from flask import Flask
 from waitress.server import create_server
 
-log = get_logger('WebServer')
+log = get_logger('DirectoryServer')
 
 
 @dataclass
@@ -18,15 +18,18 @@ class ServerConfig:
     listen: list[str]
     url_scheme: str = 'http'
     url_prefix: str = ''
-    conn_limit: int = 1000
+    threads: int = 32
+    backlog: int = 1024
+    connection_limit: int = 1000
+    channel_timeout: int = 60
 
 
-class IWebServer(object):
+class DirectoryServer:
 
     def start(self) -> None:
         raise NotImplementedError()
 
-    def shutdown(self) -> None:
+    def stop(self) -> None:
         raise NotImplementedError()
 
     def is_running(self) -> bool:
@@ -36,7 +39,7 @@ class IWebServer(object):
         raise NotImplementedError()
 
 
-class WebServer(IWebServer):
+class DefaultDirectoryServer(DirectoryServer):
 
     def __init__(self, config: ServerConfig) -> None:
         self._config = config
@@ -45,25 +48,28 @@ class WebServer(IWebServer):
                                      listen=' '.join(config.listen),
                                      url_scheme=config.url_scheme,
                                      url_prefix=config.url_prefix,
-                                     connection_limit=config.conn_limit)
-        self._thread: Union[Thread, None] = None
+                                     threads=config.threads,
+                                     backlog=config.backlog,
+                                     connection_limit=config.connection_limit,
+                                     channel_timeout=config.channel_timeout)
+        self._thread: Thread | None = None
         self._lock = Lock()
 
-    def __enter__(self) -> 'WebServer':
+    def __enter__(self) -> DirectoryServer:
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        self.shutdown()
+    def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Any) -> None:
+        self.stop()
 
     def start(self) -> None:
         if self._thread:
-            self.shutdown()
+            self.stop()
 
         with self._lock:
             self._thread = Thread(target=self._start_server)
             self._thread.start()
 
-    def shutdown(self) -> None:
+    def stop(self) -> None:
         with self._lock:
             log.info('Stopping server')
             self._server.close()

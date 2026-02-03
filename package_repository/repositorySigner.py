@@ -4,17 +4,16 @@
 
 import shutil
 from pathlib import Path
-from typing import Union
 
 from context_logger import get_logger
 from gnupg import GPG, ImportResult, Sign, Verify
 
-log = get_logger('AptSigner')
+log = get_logger('RepositorySigner')
 
 
 class GpgException(Exception):
 
-    def __init__(self, message: str, result: Union[ImportResult, Sign, Verify]) -> None:
+    def __init__(self, message: str, result: ImportResult | Sign | Verify) -> None:
         super().__init__(message)
         self.operation = type(result).__name__.replace('Result', '')
         self.code = result.returncode
@@ -43,39 +42,63 @@ class PublicGpgKey(GpgKey):
         self.public_name = public_name
 
 
-class AptSigner(object):
+class RepositorySigner:
 
-    def sign(self) -> None:
-        raise NotImplementedError
+    def initialize(self) -> None:
+        raise NotImplementedError()
+
+    def sign(self, distribution: str) -> None:
+        raise NotImplementedError()
 
 
-class ReleaseSigner(AptSigner):
+class DefaultRepositorySigner(RepositorySigner):
 
-    def __init__(self, gpg: GPG, public_key: PublicGpgKey, private_key: PrivateGpgKey,
-                 repository_dir: Path, distributions: set[str]) -> None:
-        self._repository_dir = repository_dir
-        self._distributions = distributions
-        self._public_key = public_key
-        self._private_key = private_key
+    def __init__(self, gpg: GPG, private_key: PrivateGpgKey, public_key: PublicGpgKey, repository_dir: Path) -> None:
         self._gpg = gpg
-        self._initial_run = True
+        self._private_key = private_key
+        self._public_key = public_key
+        self._repository_dir = repository_dir
 
-    def sign(self) -> None:
-        if self._initial_run:
-            self._add_public_key()
-            self._import_private_key()
+    def initialize(self) -> None:
+        self._import_private_key()
+        self._add_public_key()
 
-        for distribution in self._distributions:
-            dist_path = self._repository_dir / f'dists/{distribution}'
-            release_path = dist_path / 'Release'
+    def sign(self, distribution: str) -> None:
+        dist_path = self._repository_dir / 'dists' / distribution
+        release_path = dist_path / 'Release'
 
-            self._update_release_file(release_path)
+        self._update_release_file(release_path)
 
-            self._clearsign_release_file(dist_path, release_path)
+        self._clearsign_release_file(dist_path, release_path)
 
-            self._create_detached_signature(release_path)
+        self._create_detached_signature(release_path)
 
-        self._initial_run = False
+    def _add_public_key(self) -> None:
+        target_path = self._repository_dir / self._public_key.public_name
+        shutil.copyfile(self._public_key.path, target_path)
+        log.info('Added public key file', file=str(target_path))
+
+    def _import_private_key(self) -> None:
+        key_id = self._private_key.id
+        key_path = self._private_key.path
+
+        if self._is_key_available():
+            log.debug('Private key already present', key_id=key_id)
+        else:
+            result: ImportResult = self._gpg.import_keys_file(str(key_path))
+
+            if result.returncode != 0:
+                log.error('Failed to import private key', file=str(key_path), key_id=key_id)
+                raise GpgException('Failed to import private key', result)
+            else:
+                log.info('Imported private key', key_id=key_id)
+
+    def _is_key_available(self) -> bool:
+        for key in self._gpg.list_keys():
+            if key['fingerprint'] == self._private_key.id:
+                return True
+
+        return False
 
     def _update_release_file(self, release_path: Path) -> None:
         sign_with = 'SignWith'
@@ -93,35 +116,6 @@ class ReleaseSigner(AptSigner):
             with open(release_path, 'a') as release_file:
                 # Append Release file
                 release_file.write(f'\n{signed_with}')
-
-    def _add_public_key(self) -> None:
-        target_path = self._repository_dir / self._public_key.public_name
-        shutil.copyfile(self._public_key.path, target_path)
-        log.info('Added public key file', file=str(target_path))
-
-    def _import_private_key(self) -> None:
-        key_id = self._private_key.id
-        key_path = self._private_key.path
-
-        if self._is_key_available():
-            log.debug('Private key already present', key_id=key_id)
-        else:
-            log.info('Importing private key', key_id=key_id)
-
-            result: ImportResult = self._gpg.import_keys_file(str(key_path))
-
-            if result.returncode != 0:
-                log.error('Failed to import private key', file=str(key_path), key_id=key_id)
-                raise GpgException('Failed to import private key', result)
-            else:
-                log.debug('Imported private key', key_id=key_id)
-
-    def _is_key_available(self) -> bool:
-        for key in self._gpg.list_keys():
-            if key['fingerprint'] == self._private_key.id:
-                return True
-
-        return False
 
     def _clearsign_release_file(self, dist_path: Path, release_path: Path) -> None:
         in_release_path = dist_path / 'InRelease'

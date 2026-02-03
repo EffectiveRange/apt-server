@@ -3,7 +3,7 @@ Version: 0.0.1
 Architecture: {{architecture}}
 Maintainer: example <example@example.com>
 Depends: libc6
-Filename: pool/main/{{distribution}}/hello-world_0.0.1-1_{{architecture}}.deb
+Filename: pool/{{distribution}}/{{component}}/hello-world_0.0.1-1_{{architecture}}.deb
 Size: 2788
 MD5sum: e0231b72cac8240eb6382464c95b809d
 SHA1: 74571529d9a44e1be152ab7ab2eb6595c81f2e23
