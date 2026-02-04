@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: MIT
 
 from pathlib import Path
-from threading import Lock
 
 from context_logger import get_logger
 
@@ -29,13 +28,11 @@ class DefaultRepositoryCache(RepositoryCache):
 
     def __init__(self, distributions: set[str]) -> None:
         self._distributions = distributions
-        self._cache_locks: dict[str, Lock] = {}
         self._write_cache: dict[str, dict[Path, bytes]] = {}
         self._read_cache: dict[str, dict[Path, bytes]] = {}
 
     def initialize(self) -> None:
         for distribution in self._distributions:
-            self._cache_locks[distribution] = Lock()
             self._write_cache[distribution] = {}
             self._read_cache[distribution] = {}
 
@@ -48,18 +45,16 @@ class DefaultRepositoryCache(RepositoryCache):
 
     def load(self, distribution: str, path: Path) -> bytes | None:
         if distribution in self._read_cache:
-            with self._cache_locks[distribution]:
-                log.debug('Loading content from cache', distribution=distribution, path=str(path))
-                return self._read_cache[distribution].get(path)
+            log.debug('Loading content from cache', distribution=distribution, path=str(path))
+            return self._read_cache[distribution].get(path)
         else:
             log.warning('Attempted to load from unsupported cache', distribution=distribution, path=str(path))
             return None
 
     def switch(self, distribution: str) -> None:
         if distribution in self._read_cache:
-            with self._cache_locks[distribution]:
-                log.info('Switching cache for distribution', distribution=distribution)
-                self._read_cache[distribution] = self._write_cache[distribution]
-                self._write_cache[distribution] = {}
+            log.info('Switching cache for distribution', distribution=distribution)
+            self._read_cache[distribution] = self._write_cache[distribution]
+            self._write_cache[distribution] = {}
         else:
             log.warning('Attempted to switch unsupported cache', distribution=distribution)

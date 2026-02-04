@@ -25,8 +25,6 @@ class DefaultRepositoryCacheTest(TestCase):
         cache.initialize()
 
         # Then
-        self.assertIsNotNone(cache._cache_locks.get('trixie'))
-        self.assertIsNotNone(cache._cache_locks.get('bookworm'))
         self.assertIsNotNone(cache._write_cache.get('trixie'))
         self.assertIsNotNone(cache._write_cache.get('bookworm'))
         self.assertIsNotNone(cache._read_cache.get('trixie'))
