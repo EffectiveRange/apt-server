@@ -50,17 +50,17 @@ class DefaultRepositoryService(RepositoryService):
 
     def _handle_event(self, distribution: str) -> None:
         if distribution not in self._distributions:
-            log.warning('Received package event for unsupported distribution', distribution=distribution)
+            log.warning('Received event for unsupported distribution', distribution=distribution)
             return
 
         timer = self._get_timer(distribution)
 
         if timer.is_alive():
-            log.debug('Re-scheduling repository update for distribution',
-                      distribution=distribution, delay=self._trigger_delay)
+            log.info('Re-scheduling repository update',
+                     distribution=distribution, delay=self._trigger_delay)
             timer.restart()
         else:
-            log.info('Scheduling repository update for distribution',
+            log.info('Scheduling repository update',
                      distribution=distribution, delay=self._trigger_delay)
             timer.start(self._trigger_delay, self._update_repository, [distribution])
 
@@ -74,7 +74,7 @@ class DefaultRepositoryService(RepositoryService):
         return timer
 
     def _update_repository(self, distribution: str) -> None:
-        log.info('Updating repository for distribution', distribution=distribution)
+        log.info('Updating repository', distribution=distribution)
         self._creator.create(distribution)
         self._signer.sign(distribution)
         self._cache.switch(distribution)

@@ -40,7 +40,7 @@ class DefaultPackageWatcher(PackageWatcher, FileSystemEventHandler):
 
     def start(self) -> None:
         deb_package_dir = str(self._deb_package_dir)
-        log.info('Watching directory for .deb file changes', directory=deb_package_dir)
+        log.info('Watching package pool for changes', directory=deb_package_dir)
         self._observer.schedule(self, deb_package_dir, recursive=True)
         self._observer.start()
 
@@ -64,7 +64,7 @@ class DefaultPackageWatcher(PackageWatcher, FileSystemEventHandler):
 
     def _on_changed(self, event: FileSystemEvent) -> None:
         if str(event.src_path).endswith('.deb'):
-            log.info('File change event detected for package', event_type=event.event_type, file=event.src_path)
+            log.debug('File change event detected for package', event_type=event.event_type, file=event.src_path)
 
             try:
                 relative_path = Path(str(event.src_path)).relative_to(self._deb_package_dir)

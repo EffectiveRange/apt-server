@@ -72,18 +72,17 @@ class DefaultRepositoryCreator(RepositoryCreator):
         target_link = self._config.repository_dir / 'pool'
 
         if target_link.exists() or target_link.is_symlink():
-            log.info('Removing existing link', target=str(target_link))
+            log.debug('Removing existing link', target=str(target_link))
             self._clean_target(target_link)
 
         source_dir = self._config.deb_package_dir
 
         if not source_dir.is_dir():
-            log.info('Creating .deb package directory', directory=str(source_dir))
+            log.info('Creating package pool directory', directory=str(source_dir))
             os.makedirs(source_dir)
 
+        log.info('Linking package pool directory', source=str(source_dir), target=str(target_link))
         os.symlink(source_dir, target_link, target_is_directory=True)
-
-        log.info('Linked .deb package directory', source=str(source_dir), target=str(target_link))
 
     def _clean_target(self, target_link: Path) -> None:
         if target_link.is_symlink():

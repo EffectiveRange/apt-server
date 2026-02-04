@@ -44,7 +44,7 @@ class DefaultRepositoryCache(RepositoryCache):
             log.debug('Storing content to cache', distribution=distribution, path=str(path))
             self._write_cache[distribution][path] = content
         else:
-            log.warning('Attempted to store to invalid distribution cache', distribution=distribution, path=str(path))
+            log.warning('Attempted to store to unsupported cache', distribution=distribution, path=str(path))
 
     def load(self, distribution: str, path: Path) -> bytes | None:
         if distribution in self._read_cache:
@@ -52,14 +52,14 @@ class DefaultRepositoryCache(RepositoryCache):
                 log.debug('Loading content from cache', distribution=distribution, path=str(path))
                 return self._read_cache[distribution].get(path)
         else:
-            log.warning('Attempted to load from invalid distribution cache', distribution=distribution, path=str(path))
+            log.warning('Attempted to load from unsupported cache', distribution=distribution, path=str(path))
             return None
 
     def switch(self, distribution: str) -> None:
         if distribution in self._read_cache:
             with self._cache_locks[distribution]:
-                log.debug('Switching cache for distribution', distribution=distribution)
+                log.info('Switching cache for distribution', distribution=distribution)
                 self._read_cache[distribution] = self._write_cache[distribution]
                 self._write_cache[distribution] = {}
         else:
-            log.warning('Attempted to switch invalid distribution cache', distribution=distribution)
+            log.warning('Attempted to switch unsupported cache', distribution=distribution)
