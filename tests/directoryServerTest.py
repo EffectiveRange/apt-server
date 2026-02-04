@@ -5,14 +5,15 @@ from context_logger import setup_logging
 from flask import Response
 from test_utility import wait_for_condition
 
-from apt_server import WebServer, ServerConfig
+from package_repository import ServerConfig, DefaultDirectoryServer
+from tests import APPLICATION_NAME
 
 
-class WebServerTest(TestCase):
+class DirectoryServerTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        setup_logging('apt-server', 'DEBUG', warn_on_overwrite=False)
+        setup_logging(APPLICATION_NAME, 'DEBUG', warn_on_overwrite=False)
 
     def setUp(self):
         print()
@@ -21,30 +22,30 @@ class WebServerTest(TestCase):
         # Given
         config = ServerConfig(['*:0'])
 
-        with WebServer(config) as web_server:
+        with DefaultDirectoryServer(config) as server:
             # When
-            web_server.start()
+            server.start()
 
             # Then
-            wait_for_condition(1, lambda: web_server.is_running())
+            wait_for_condition(1, lambda: server.is_running())
 
-        wait_for_condition(1, lambda: not web_server.is_running())
+        wait_for_condition(1, lambda: not server.is_running())
 
     def test_returns_200(self):
         # Given
         config = ServerConfig(['*:0'])
 
-        with WebServer(config) as web_server:
+        with DefaultDirectoryServer(config) as server:
             # When
-            @web_server.get_app().route('/test', methods=['GET'])
+            @server.get_app().route('/test', methods=['GET'])
             def get_test() -> Response:
                 return Response(status=200, response='Test OK')
 
-            web_server.start()
+            server.start()
 
-            wait_for_condition(1, lambda: web_server.is_running())
+            wait_for_condition(1, lambda: server.is_running())
 
-            client = web_server._app.test_client()
+            client = server.get_app().test_client()
 
             # When
             response = client.get('/test')

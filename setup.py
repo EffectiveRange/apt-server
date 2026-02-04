@@ -1,14 +1,14 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='apt-server',
-    description='APT server with dynamic package pool handling',
+    name='debian-package-repository',
+    description='APT repository with dynamic package pool handling',
     author='Ferenc Nandor Janky & Attila Gombos',
     author_email='info@effective-range.com',
     packages=find_packages(exclude=['tests']),
-    scripts=['bin/apt-server.py'],
+    scripts=['bin/debian-package-repository.py'],
     data_files=[
-        ('config', ['config/apt-server.conf']),
+        ('config', ['config/debian-package-repository.conf']),
         ('templates', ['templates/Release.j2', 'templates/directory.j2'])
     ],
     use_scm_version=True,

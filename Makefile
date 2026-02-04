@@ -15,7 +15,7 @@ package:
 	fpm setup.py
 
 image:
-	docker build $(ROOT_DIR) --file Dockerfile --tag effectiverange/apt-server$(:)$(TAG)
+	docker build $(ROOT_DIR) --file Dockerfile --tag effectiverange/debian-package-repository$(:)$(TAG)
 
 service:
-	TAG=$(TAG) envsubst '$$TAG' < $(ROOT_DIR)/service/apt-server.docker.service > $(ROOT_DIR)/dist/apt-server-$(TAG:v%=%).docker.service
+	TAG=$(TAG) envsubst '$$TAG' < $(ROOT_DIR)/service/v.docker.service > $(ROOT_DIR)/dist/debian-package-repository-$(TAG:v%=%).docker.service

@@ -12,10 +12,10 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Python Debugger: apt-server",
+            "name": "Python Debugger: debian-package-repository",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/apt-server.py",
+            "program": "${workspaceFolder}/bin/debian-package-repository.py",
             "args": [],
             "console": "integratedTerminal"
         }

@@ -8,15 +8,11 @@ from common_utility import delete_directory
 from context_logger import setup_logging
 from gnupg import GPG
 
-from apt_repository.aptRepository import LinkedPoolAptRepository
-from apt_repository.aptSigner import ReleaseSigner, PublicGpgKey, PrivateGpgKey
-from tests import create_test_packages, TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR
+from package_repository import RepositoryConfig, DefaultRepositoryCreator, DefaultRepositorySigner, PrivateGpgKey, \
+    PublicGpgKey, DefaultRepositoryCache
+from tests import create_test_packages, TEST_RESOURCE_ROOT, REPOSITORY_DIR, APPLICATION_NAME, \
+    PACKAGE_DIR, RELEASE_TEMPLATE_PATH
 
-APPLICATION_NAME = 'apt-server'
-ARCHITECTURE = 'amd64'
-DISTRIBUTION = 'stable'
-PACKAGE_DIR = Path(f'{TEST_RESOURCE_ROOT}/test-debs')
-TEMPLATE_PATH = Path(f'{RESOURCE_ROOT}/templates/Release.j2')
 PRIVATE_KEY_PATH = Path(f'{TEST_RESOURCE_ROOT}/keys/private-key.asc')
 PUBLIC_KEY_PATH = Path(f'{TEST_RESOURCE_ROOT}/keys/public-key.asc')
 PUBLIC_KEY_NAME = 'test.gpg.key'
@@ -24,31 +20,33 @@ KEY_ID = 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3'
 PASSPHRASE = 'test1234'
 
 
-class AptSignerIntegrationTest(TestCase):
+class RepositorySignerIntegrationTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
         setup_logging(APPLICATION_NAME, 'DEBUG', warn_on_overwrite=False)
         delete_directory(PACKAGE_DIR)
-        create_test_packages(PACKAGE_DIR, DISTRIBUTION)
+        create_test_packages(PACKAGE_DIR, 'trixie')
 
     def setUp(self):
         print()
 
     def test_release_file_signed(self):
         # Given
-        gpg, public_key, private_key = create_components()
-        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR, {DISTRIBUTION})
+        cache, config, gpg, private_key, public_key = create_components()
+        creator = DefaultRepositoryCreator(cache, config)
+        signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
 
-        LinkedPoolAptRepository(
-            APPLICATION_NAME, {ARCHITECTURE}, {DISTRIBUTION}, REPOSITORY_DIR, PACKAGE_DIR, TEMPLATE_PATH
-        ).create()
+        creator.initialize()
+        signer.initialize()
+
+        creator.create('trixie')
 
         # When
-        release_signer.sign()
+        signer.sign('trixie')
 
         # Then
-        release_path = f'{REPOSITORY_DIR}/dists/stable'
+        release_path = f'{REPOSITORY_DIR}/dists/trixie'
         release_file_path = f'{release_path}/Release'
         self.assertTrue(os.path.exists(release_file_path))
 
@@ -68,22 +66,24 @@ class AptSignerIntegrationTest(TestCase):
 
     def test_release_file_resigned(self):
         # Given
-        gpg, public_key, private_key = create_components()
-        release_signer = ReleaseSigner(gpg, public_key, private_key, REPOSITORY_DIR, {DISTRIBUTION})
+        cache, config, gpg, private_key, public_key = create_components()
+        creator = DefaultRepositoryCreator(cache, config)
+        signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
 
-        LinkedPoolAptRepository(
-            APPLICATION_NAME, {ARCHITECTURE}, {DISTRIBUTION}, REPOSITORY_DIR, PACKAGE_DIR, TEMPLATE_PATH
-        ).create()
-        release_signer.sign()
+        creator.initialize()
+        signer.initialize()
 
-        release_path = f'{REPOSITORY_DIR}/dists/stable'
+        creator.create('trixie')
+        signer.sign('trixie')
+
+        release_path = f'{REPOSITORY_DIR}/dists/trixie'
         release_file_path = f'{release_path}/Release'
 
         with open(release_file_path, 'a') as release_file:
             release_file.write('\nSignWith: ABCDEFGHIJKLMNOPQRSTUVWXYZ')
 
         # When
-        release_signer.sign()
+        signer.sign('trixie')
 
         # Then
         with open(release_file_path) as release_file:
@@ -92,11 +92,15 @@ class AptSignerIntegrationTest(TestCase):
 
 
 def create_components():
+    distributions = {'bookworm', 'trixie'}
+    cache = DefaultRepositoryCache(distributions)
+    config = RepositoryConfig(APPLICATION_NAME, '1.0.0', distributions, {'main'}, {'amd64', 'arm64'},
+                              REPOSITORY_DIR, PACKAGE_DIR, RELEASE_TEMPLATE_PATH)
     gpg = GPG()
-    public_key = PublicGpgKey(KEY_ID, PUBLIC_KEY_PATH, PUBLIC_KEY_NAME)
     private_key = PrivateGpgKey(KEY_ID, PRIVATE_KEY_PATH, PASSPHRASE)
+    public_key = PublicGpgKey(KEY_ID, PUBLIC_KEY_PATH, PUBLIC_KEY_NAME)
 
-    return gpg, public_key, private_key
+    return cache, config, gpg, private_key, public_key
 
 
 if __name__ == "__main__":

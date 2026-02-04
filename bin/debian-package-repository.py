@@ -7,21 +7,22 @@
 import argparse
 import os
 import signal
+from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 from typing import Any
 
-from common_utility import ConfigLoader, ReusableTimer
+from common_utility import ConfigLoader
 from context_logger import get_logger, setup_logging
 from gnupg import GPG
 from watchdog.observers import Observer
 
-from apt_repository.aptRepository import LinkedPoolAptRepository
-from apt_repository.aptSigner import ReleaseSigner, PublicGpgKey, PrivateGpgKey
-from apt_server import AptServer, ServerConfig, WebServer, DirectoryConfig, DirectoryService, AptServerConfig
+from package_repository import DefaultRepositoryServer, RepositoryConfig, DefaultRepositoryService, \
+    DefaultPackageWatcher, DefaultRepositoryCreator, DefaultRepositorySigner, DefaultRepositoryCache, DirectoryConfig, \
+    DefaultDirectoryService, DefaultDirectoryServer, ServerConfig, PublicGpgKey, PrivateGpgKey
 
-APPLICATION_NAME = 'apt-server'
+APPLICATION_NAME = 'debian-package-repository'
 
-log = get_logger('AptServerApp')
+log = get_logger('PackageRepositoryApp')
 
 
 def main() -> None:
@@ -40,11 +41,15 @@ def main() -> None:
     server_port = int(config.get('server_port', 9000))
     server_scheme = config.get('server_scheme', 'http')
     server_prefix = config.get('server_prefix', '')
-    server_conn_limit = int(config.get('server_conn_limit', 1000))
+    server_threads = int(config.get('server_threads', 32))
+    server_backlog = int(config.get('server_backlog', 1024))
+    server_connection_limit = int(config.get('server_connection_limit', 1000))
+    server_channel_timeout = int(config.get('server_channel_timeout', 60))
 
-    architectures = {arch.strip() for arch in config['architectures'].split(',')}
-    distributions = {dist.strip() for dist in config.get('distributions', 'stable').split(',')}
-    repository_dir = _get_absolute_path(config.get('repository_dir', '/etc/apt-repo'))
+    distributions = {dist.strip() for dist in config.get('distributions', 'trixie').split(',')}
+    components = {comp.strip() for comp in config.get('components', 'main').split(',')}
+    architectures = {arch.strip() for arch in config.get('architectures', 'amd64').split(',')}
+    repository_dir = _get_absolute_path(config.get('repository_dir', f'/etc/{APPLICATION_NAME}'))
     deb_package_dir = _get_absolute_path(config.get('deb_package_dir', '/opt/debs'))
     repo_create_delay = float(config.get('repo_create_delay', 10))
     release_template = _get_absolute_path(config.get('release_template', 'templates/Release.j2'))
@@ -53,45 +58,52 @@ def main() -> None:
     private_key_path = _get_absolute_path(config.get('private_key_path', 'tests/keys/private-key.asc'))
     private_key_pass = config.get('private_key_pass', 'test1234')
     public_key_path = _get_absolute_path(config.get('public_key_path', 'tests/keys/public-key.asc'))
-    public_key_name = config.get('public_key_name', 'aptserver.gpg.key')
-
-    public_key = PublicGpgKey(private_key_id, public_key_path, public_key_name)
-    private_key = PrivateGpgKey(private_key_id, private_key_path, private_key_pass)
-    apt_signer = ReleaseSigner(GPG(), public_key, private_key, repository_dir, distributions)
-    apt_repository = LinkedPoolAptRepository(
-        APPLICATION_NAME, architectures, distributions, repository_dir, deb_package_dir, release_template
-    )
-
-    server_config = ServerConfig([f'{server_host}:{server_port}'], server_scheme, server_prefix, server_conn_limit)
-    web_server = WebServer(server_config)
+    public_key_name = config.get('public_key_name', 'repository.gpg.key')
 
     directory_username = config.get('directory_username', 'admin')
     directory_password = config.get('directory_password', 'admin')
     directory_template = _get_absolute_path(config.get('directory_template', 'templates/directory.j2'))
     directory_private_patterns = config.get('directory_private')
 
+    version = _get_version(APPLICATION_NAME)
+
+    public_key = PublicGpgKey(private_key_id, public_key_path, public_key_name)
+    private_key = PrivateGpgKey(private_key_id, private_key_path, private_key_pass)
+
     private_dirs = []
     if directory_private_patterns:
         directory_private_patterns = directory_private_patterns.strip().split('\n')
         for pattern in directory_private_patterns:
-            private_dirs.extend([path for path in repository_dir.joinpath('pool/main').glob(pattern) if path.is_dir()])
+            private_dirs.extend([path for path in repository_dir.joinpath('pool').glob(pattern) if path.is_dir()])
 
-    directory_config = DirectoryConfig(repository_dir, directory_username, directory_password,
+    file_observer = Observer()
+    package_watcher = DefaultPackageWatcher(file_observer, deb_package_dir)
+    repository_cache = DefaultRepositoryCache(distributions)
+    repository_config = RepositoryConfig(APPLICATION_NAME, version, distributions, components, architectures,
+                                         repository_dir, deb_package_dir, release_template)
+    repository_creator = DefaultRepositoryCreator(repository_cache, repository_config)
+    repository_signer = DefaultRepositorySigner(repository_cache, GPG(), private_key, public_key, repository_dir)
+
+    repository_service = DefaultRepositoryService(package_watcher, repository_creator, repository_signer,
+                                                  repository_cache, distributions, repo_create_delay)
+
+    server_config = ServerConfig([f'{server_host}:{server_port}'], server_scheme, server_prefix, server_threads,
+                                 server_backlog, server_connection_limit, server_channel_timeout)
+    directory_server = DefaultDirectoryServer(server_config)
+    directory_config = DirectoryConfig(repository_dir, version, directory_username, directory_password,
                                        private_dirs, directory_template)
-    directory_service = DirectoryService(web_server, directory_config)
-    timer = ReusableTimer()
+    directory_service = DefaultDirectoryService(directory_server, repository_cache, directory_config)
 
-    apt_server_config = AptServerConfig(deb_package_dir, repo_create_delay)
-    apt_server = AptServer(timer, apt_repository, apt_signer, Observer(), directory_service, apt_server_config)
+    repository_server = DefaultRepositoryServer(repository_service, directory_service)
 
     def signal_handler(signum: int, frame: Any) -> None:
         log.info('Shutting down', signum=signum)
-        apt_server.shutdown()
+        repository_server.shutdown()
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    apt_server.run()
+    repository_server.run()
 
 
 def _get_arguments() -> dict[str, Any]:
@@ -110,9 +122,14 @@ def _get_arguments() -> dict[str, Any]:
     parser.add_argument('--server-port', help='server port to listen on', type=int)
     parser.add_argument('--server-scheme', help='server URL scheme')
     parser.add_argument('--server-prefix', help='server URL prefix')
+    parser.add_argument('--server-threads', help='server threads', type=int)
+    parser.add_argument('--server-backlog', help='server backlog', type=int)
+    parser.add_argument('--server-connection-limit', help='server connection limit', type=int)
+    parser.add_argument('--server-channel-timeout', help='server channel timeout', type=int)
 
-    parser.add_argument('--architectures', help='served package architectures (comma separated)')
     parser.add_argument('--distributions', help='supported distributions (comma separated)')
+    parser.add_argument('--components', help='supported components (comma separated)')
+    parser.add_argument('--architectures', help='served package architectures (comma separated)')
     parser.add_argument('--repository-dir', help='repository root directory')
     parser.add_argument('--deb-package-dir', help='directory containing the debian packages')
     parser.add_argument('--repo-create-delay', help='repository creation delay after package changes', type=float)
@@ -147,6 +164,13 @@ def _update_logging(configuration: dict[str, Any]) -> None:
     log_level = configuration.get('log_level', 'INFO')
     log_file = configuration.get('log_file')
     setup_logging(APPLICATION_NAME, log_level, log_file, warn_on_overwrite=False)
+
+
+def _get_version(application_name: str) -> str:
+    try:
+        return version(application_name)
+    except PackageNotFoundError:
+        return 'none'
 
 
 if __name__ == '__main__':
