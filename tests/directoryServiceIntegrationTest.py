@@ -2,6 +2,7 @@ import base64
 import gzip
 import os
 import unittest
+from io import BytesIO
 from pathlib import Path
 from unittest import TestCase
 
@@ -107,12 +108,30 @@ class DirectoryServiceTest(TestCase):
             with open(PACKAGE_DIR / 'trixie/main/hello-world_0.0.1-1_amd64.deb', 'rb') as file:
                 self.assertEqual(file.read(), response.data)
 
-    def test_returns_200_when_accessing_non_cached_text_file(self):
+    def test_returns_404_when_accessing_non_cached_file(self):
+        # Given
+        web_server, cache, config = create_components()
+
+        with DefaultDirectoryService(web_server, cache, config) as directory_service:
+            # When
+            directory_service.start()
+
+            wait_for_condition(1, lambda: web_server.is_running())
+
+            client = web_server._app.test_client()
+
+            # When
+            response = client.get('/dists/trixie/info')
+
+            # Then
+            self.assertEqual(404, response.status_code)
+
+    def test_returns_200_when_accessing_cached_extensionless_file(self):
         # Given
         web_server, cache, config = create_components()
         file_path = REPOSITORY_DIR / 'dists/trixie/info'
-        file_content = 'This is a test file.'
-        create_file(file_path, file_content)
+        file_content = b'This is a test file.'
+        cache._read_cache['trixie'][file_path] = file_content
 
         with DefaultDirectoryService(web_server, cache, config) as directory_service:
             # When
@@ -128,14 +147,14 @@ class DirectoryServiceTest(TestCase):
             # Then
             self.assertEqual(200, response.status_code)
             self.assertEqual('text/plain; charset=utf-8', response.content_type)
-            self.assertEqual(file_content.encode(), response.data)
+            self.assertEqual(file_content, response.data)
 
     def test_returns_200_when_accessing_cached_text_file(self):
         # Given
         web_server, cache, config = create_components()
         file_path = REPOSITORY_DIR / 'dists/trixie/info.txt'
-        file_content = 'This is a test file.'
-        create_file(file_path, file_content)
+        file_content = b'This is a test file.'
+        cache._read_cache['trixie'][file_path] = file_content
 
         with DefaultDirectoryService(web_server, cache, config) as directory_service:
             # When
@@ -153,45 +172,17 @@ class DirectoryServiceTest(TestCase):
             # Then
             self.assertEqual(200, response.status_code)
             self.assertEqual('text/plain; charset=utf-8', response.content_type)
-            self.assertEqual(file_content.encode(), response.data)
-
-    def test_returns_200_when_accessing_non_cached_binary_file(self):
-        # Given
-        web_server, cache, config = create_components()
-        file_path = REPOSITORY_DIR / 'dists/trixie/info.txt'
-        file_content = 'This is a test file.'
-        create_file(file_path, file_content)
-        compressed_path = REPOSITORY_DIR / 'dists/trixie/info.gz'
-        with open(file_path, 'rb') as file_in, gzip.open(compressed_path, 'wb') as file_out:
-            file_out.writelines(file_in)
-
-        with DefaultDirectoryService(web_server, cache, config) as directory_service:
-            # When
-            directory_service.start()
-
-            wait_for_condition(1, lambda: web_server.is_running())
-
-            client = web_server._app.test_client()
-
-            # When
-            response = client.get('/dists/trixie/info.gz')
-
-            # Then
-            self.assertEqual(200, response.status_code)
-            self.assertEqual('gzip', response.headers['Content-Encoding'])
-            self.assertEqual('attachment; filename="info.gz"', response.headers['Content-Disposition'])
-            with open(compressed_path, 'rb') as compressed_file:
-                self.assertEqual(compressed_file.read(), response.data)
+            self.assertEqual(file_content, response.data)
 
     def test_returns_200_when_accessing_cached_binary_file(self):
         # Given
         web_server, cache, config = create_components()
-        file_path = REPOSITORY_DIR / 'dists/trixie/info.txt'
-        file_content = 'This is a test file.'
-        create_file(file_path, file_content)
         compressed_path = REPOSITORY_DIR / 'dists/trixie/info.gz'
-        with open(file_path, 'rb') as file_in, gzip.open(compressed_path, 'wb') as file_out:
-            file_out.writelines(file_in)
+        file_content = b'This is a test file.'
+        buffer = BytesIO()
+        with gzip.GzipFile(fileobj=buffer, mode='wb') as gz:
+            gz.write(file_content)
+        cache._read_cache['trixie'][compressed_path] = buffer.getvalue()
 
         with DefaultDirectoryService(web_server, cache, config) as directory_service:
             # When
@@ -210,8 +201,7 @@ class DirectoryServiceTest(TestCase):
             self.assertEqual(200, response.status_code)
             self.assertEqual('gzip', response.headers['Content-Encoding'])
             self.assertEqual('attachment; filename="info.gz"', response.headers['Content-Disposition'])
-            with open(compressed_path, 'rb') as compressed_file:
-                self.assertEqual(compressed_file.read(), response.data)
+            self.assertEqual(cache._read_cache['trixie'][compressed_path], response.data)
 
     def test_returns_200_when_accessing_private_directory_with_auth(self):
         # Given
@@ -317,7 +307,8 @@ class DirectoryServiceTest(TestCase):
 
 def create_components():
     web_server = DefaultDirectoryServer(ServerConfig(['*:0']))
-    cache = DefaultRepositoryCache()
+    cache = DefaultRepositoryCache({'bookworm', 'trixie'})
+    cache.initialize()
     config = DirectoryConfig(REPOSITORY_DIR, '1.0.0', 'admin', 'admin', [],
                              Path(f'{RESOURCE_ROOT}/templates/directory.j2'))
     return web_server, cache, config

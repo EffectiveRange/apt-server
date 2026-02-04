@@ -78,11 +78,12 @@ def main() -> None:
 
     file_observer = Observer()
     package_watcher = DefaultPackageWatcher(file_observer, deb_package_dir)
+    repository_cache = DefaultRepositoryCache(distributions)
     repository_config = RepositoryConfig(APPLICATION_NAME, version, distributions, components, architectures,
                                          repository_dir, deb_package_dir, release_template)
-    repository_creator = DefaultRepositoryCreator(repository_config)
-    repository_signer = DefaultRepositorySigner(GPG(), private_key, public_key, repository_dir)
-    repository_cache = DefaultRepositoryCache()
+    repository_creator = DefaultRepositoryCreator(repository_cache, repository_config)
+    repository_signer = DefaultRepositorySigner(repository_cache, GPG(), private_key, public_key, repository_dir)
+
     repository_service = DefaultRepositoryService(package_watcher, repository_creator, repository_signer,
                                                   repository_cache, distributions, repo_create_delay)
 

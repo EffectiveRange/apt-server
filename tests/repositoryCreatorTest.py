@@ -1,13 +1,13 @@
 import os
 import unittest
-from importlib.metadata import version
 from unittest import TestCase
+from unittest.mock import MagicMock
 
 from common_utility import delete_directory, render_template_file, create_directory
 from context_logger import setup_logging
 from test_utility import compare_lines
 
-from package_repository import RepositoryConfig, DefaultRepositoryCreator
+from package_repository import RepositoryConfig, DefaultRepositoryCreator, RepositoryCache
 from tests import (
     create_test_packages,
     TEST_RESOURCE_ROOT,
@@ -33,8 +33,8 @@ class RepositoryCreatorTest(TestCase):
         # Given
         delete_directory(REPOSITORY_DIR)
 
-        config = create_config()
-        creator = DefaultRepositoryCreator(config)
+        cache, config = create_components()
+        creator = DefaultRepositoryCreator(cache, config)
 
         # When
         creator.initialize()
@@ -47,8 +47,8 @@ class RepositoryCreatorTest(TestCase):
         # Given
         delete_directory(PACKAGE_DIR)
 
-        config = create_config()
-        creator = DefaultRepositoryCreator(config)
+        cache, config = create_components()
+        creator = DefaultRepositoryCreator(cache, config)
 
         # When
         creator.initialize()
@@ -64,8 +64,8 @@ class RepositoryCreatorTest(TestCase):
             {'distribution': 'trixie', 'component': 'main', 'architecture': 'amd64'},
         ).splitlines()
 
-        config = create_config()
-        creator = DefaultRepositoryCreator(config)
+        cache, config = create_components()
+        creator = DefaultRepositoryCreator(cache, config)
 
         # When
         creator.create('trixie')
@@ -94,14 +94,18 @@ class RepositoryCreatorTest(TestCase):
             {
                 'origin': APPLICATION_NAME,
                 'label': APPLICATION_NAME,
+                'version': '1.0.0',
                 'codename': 'trixie',
-                'version': version(APPLICATION_NAME),
                 'architectures': 'all amd64 arm64',
+                'components': 'main',
+                'md5_checksums': 'Packages',
+                'sha1_checksums': 'Packages',
+                'sha256_checksums': 'Packages'
             },
         ).splitlines()
 
-        config = create_config()
-        creator = DefaultRepositoryCreator(config)
+        cache, config = create_components()
+        creator = DefaultRepositoryCreator(cache, config)
 
         # When
         creator.create('trixie')
@@ -112,15 +116,17 @@ class RepositoryCreatorTest(TestCase):
 
         release = open(release_file_path, 'r').read().splitlines()
 
-        exclusions = ['', 'Date', 'Packages']
+        exclusions = ['Date', 'Packages']
 
         all_matches = compare_lines(expected_release, release, exclusions)
         self.assertTrue(all_matches)
 
 
-def create_config():
-    return RepositoryConfig(APPLICATION_NAME, '1.0.0', {'bookworm', 'trixie'}, {'main'}, {'amd64', 'arm64'},
-                            REPOSITORY_DIR, PACKAGE_DIR, RELEASE_TEMPLATE_PATH)
+def create_components():
+    cache = MagicMock(spec=RepositoryCache)
+    config = RepositoryConfig(APPLICATION_NAME, '1.0.0', {'bookworm', 'trixie'}, {'main'}, {'amd64', 'arm64'},
+                              REPOSITORY_DIR, PACKAGE_DIR, RELEASE_TEMPLATE_PATH)
+    return cache, config
 
 
 if __name__ == "__main__":

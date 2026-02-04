@@ -1,10 +1,7 @@
 import unittest
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from unittest import TestCase
-from unittest.mock import patch
 
-from common_utility import create_file
 from context_logger import setup_logging
 
 from package_repository import DefaultRepositoryCache
@@ -19,94 +16,92 @@ class DefaultRepositoryCacheTest(TestCase):
 
     def setUp(self):
         print()
-        self.temp_dir = TemporaryDirectory()
-        self.directory = Path(self.temp_dir.name)
 
-    def tearDown(self):
-        self.temp_dir.cleanup()
-
-    def test_lock(self):
+    def test_initialize(self):
         # Given
-        cache = DefaultRepositoryCache()
+        cache = DefaultRepositoryCache({'bookworm', 'trixie'})
 
         # When
-        cache.lock('trixie')
+        cache.initialize()
 
         # Then
-        self.assertTrue(cache._distribution_locks['trixie'].locked())
+        self.assertIsNotNone(cache._cache_locks.get('trixie'))
+        self.assertIsNotNone(cache._cache_locks.get('bookworm'))
+        self.assertIsNotNone(cache._write_cache.get('trixie'))
+        self.assertIsNotNone(cache._write_cache.get('bookworm'))
+        self.assertIsNotNone(cache._read_cache.get('trixie'))
+        self.assertIsNotNone(cache._read_cache.get('bookworm'))
 
-    def test_unlock(self):
+    def test_store(self):
         # Given
-        cache = DefaultRepositoryCache()
+        cache = DefaultRepositoryCache({'bookworm', 'trixie'})
+        cache.initialize()
 
         # When
-        cache.lock('trixie')
-        cache.unlock('trixie')
+        cache.store('trixie', Path('test.txt'), b'Test content')
 
         # Then
-        self.assertFalse(cache._distribution_locks['trixie'].locked())
+        self.assertEqual(b'Test content', cache._write_cache.get('trixie').get(Path('test.txt')))
 
-    def test_store_and_load(self):
+    def test_store_when_distribution_is_invalid(self):
         # Given
-        cache = DefaultRepositoryCache()
-
-        cache.store('trixie', self.directory / 'test.txt', b'Test content')
+        cache = DefaultRepositoryCache({'bookworm', 'trixie'})
+        cache.initialize()
 
         # When
-        loaded = cache.load('trixie', self.directory / 'test.txt')
+        cache.store('invalid', Path('test.txt'), b'Test content')
 
         # Then
-        self.assertEqual(loaded, b'Test content')
+        self.assertIsNone(cache._write_cache.get('trixie').get(Path('test.txt')))
 
-    def test_load_from_file_system_when_not_in_cache(self):
+    def test_load(self):
         # Given
-        create_file(self.directory / 'test.txt', 'Test content')
-
-        cache = DefaultRepositoryCache()
+        cache = DefaultRepositoryCache({'bookworm', 'trixie'})
+        cache.initialize()
+        cache._read_cache['trixie'][Path('test.txt')] = b'Test content'
 
         # When
-        content = cache.load('trixie', self.directory / 'test.txt')
+        content = cache.load('trixie', Path('test.txt'))
 
         # Then
-        self.assertEqual(content, b'Test content')
+        self.assertEqual(b'Test content', content)
 
-    def test_load_read_failure_when_not_in_cache(self):
+    def test_load_when_distribution_is_invalid(self):
         # Given
-        create_file(self.directory / 'test.txt', 'Test content')
-
-        cache = DefaultRepositoryCache()
-
-        with patch("builtins.open", side_effect=OSError("Read failed")):
-            # When
-            result = cache.load('trixie', self.directory / 'test.txt')
-
-            # Then
-            self.assertIsNone(result)
-
-    def test_store_and_clear(self):
-        # Given
-        cache = DefaultRepositoryCache()
-
-        cache.store('trixie', self.directory / 'test.txt', b'Test content')
+        cache = DefaultRepositoryCache({'bookworm', 'trixie'})
+        cache.initialize()
 
         # When
-        cache.clear('trixie')
+        content = cache.load('invalid', Path('test.txt'))
 
         # Then
-        self.assertIsNone(cache.load('trixie', self.directory / 'test.txt'))
+        self.assertIsNone(content)
 
-    def test_lock_and_clear(self):
+    def test_switch(self):
         # Given
-        cache = DefaultRepositoryCache()
-
-        cache.store('trixie', self.directory / 'test.txt', b'Test content')
+        cache = DefaultRepositoryCache({'bookworm', 'trixie'})
+        cache.initialize()
+        cache._write_cache['trixie'][Path('test.txt')] = b'Test content'
 
         # When
-        cache.lock('trixie')
-        cache.clear('trixie')
+        cache.switch('trixie')
 
         # Then
-        self.assertFalse(cache._distribution_locks['trixie'].locked())
+        self.assertEqual(b'Test content', cache._read_cache.get('trixie').get(Path('test.txt')))
+        self.assertIsNone(cache._write_cache.get('trixie').get(Path('test.txt')))
+
+    def test_switch_when_distribution_is_invalid(self):
+        # Given
+        cache = DefaultRepositoryCache({'bookworm', 'trixie'})
+        cache.initialize()
+        cache._write_cache['trixie'][Path('test.txt')] = b'Test content'
+
+        # When
+        cache.switch('invalid')
+
+        # Then
+        self.assertIsNone(cache._read_cache.get('trixie').get(Path('test.txt')))
+        self.assertEqual(b'Test content', cache._write_cache.get('trixie').get(Path('test.txt')))
 
 
 if __name__ == "__main__":

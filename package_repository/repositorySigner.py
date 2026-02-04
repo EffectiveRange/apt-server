@@ -8,6 +8,8 @@ from pathlib import Path
 from context_logger import get_logger
 from gnupg import GPG, ImportResult, Sign, Verify
 
+from package_repository import RepositoryCache
+
 log = get_logger('RepositorySigner')
 
 
@@ -53,7 +55,9 @@ class RepositorySigner:
 
 class DefaultRepositorySigner(RepositorySigner):
 
-    def __init__(self, gpg: GPG, private_key: PrivateGpgKey, public_key: PublicGpgKey, repository_dir: Path) -> None:
+    def __init__(self, cache: RepositoryCache, gpg: GPG, private_key: PrivateGpgKey, public_key: PublicGpgKey,
+                 repository_dir: Path) -> None:
+        self._cache = cache
         self._gpg = gpg
         self._private_key = private_key
         self._public_key = public_key
@@ -67,11 +71,11 @@ class DefaultRepositorySigner(RepositorySigner):
         dist_path = self._repository_dir / 'dists' / distribution
         release_path = dist_path / 'Release'
 
-        self._update_release_file(release_path)
+        self._update_release_file(distribution, release_path)
 
-        self._clearsign_release_file(dist_path, release_path)
+        self._clearsign_release_file(distribution, release_path)
 
-        self._create_detached_signature(release_path)
+        self._create_detached_signature(distribution, release_path)
 
     def _add_public_key(self) -> None:
         target_path = self._repository_dir / self._public_key.public_name
@@ -100,53 +104,58 @@ class DefaultRepositorySigner(RepositorySigner):
 
         return False
 
-    def _update_release_file(self, release_path: Path) -> None:
+    def _update_release_file(self, distribution: str, release_path: Path) -> None:
         sign_with = 'SignWith'
         signed_with = f'{sign_with}: {self._private_key.id}'
 
         with open(release_path, 'r') as release_file:
-            lines = release_file.readlines()
+            release_lines = release_file.readlines()
 
-        if sign_with in lines[-1]:
-            # Update last line
-            lines[-1] = signed_with
-            with open(release_path, 'w') as release_file:
-                release_file.writelines(lines)
+        if sign_with in release_lines[-1]:
+            release_lines[-1] = signed_with
         else:
-            with open(release_path, 'a') as release_file:
-                # Append Release file
-                release_file.write(f'\n{signed_with}')
+            release_lines.append(f'\n{signed_with}')
 
-    def _clearsign_release_file(self, dist_path: Path, release_path: Path) -> None:
-        in_release_path = dist_path / 'InRelease'
+        release_content = ''.join(release_lines).encode()
 
-        self._create_signature(release_path, in_release_path, detach=False)
+        self._create_file(distribution, release_path, release_content)
+
+    def _clearsign_release_file(self, distribution: str, release_path: Path) -> None:
+        in_release_path = release_path.parent / 'InRelease'
+
+        self._create_signature(distribution, release_path, in_release_path, detach=False)
 
         log.info('Created signed Release file', file=str(in_release_path))
 
-    def _create_detached_signature(self, release_path: Path) -> None:
+    def _create_detached_signature(self, distribution: str, release_path: Path) -> None:
         signature_path = Path(f'{release_path}.gpg')
 
-        self._create_signature(release_path, signature_path, detach=True)
+        self._create_signature(distribution, release_path, signature_path, detach=True)
 
         log.info('Created signature file', file=str(signature_path))
 
-    def _create_signature(self, release_path: Path, signature_path: Path, detach: bool) -> None:
+    def _create_signature(self, distribution: str, release_path: Path, signature_path: Path, detach: bool) -> None:
         result: Sign = self._gpg.sign_file(
             str(release_path),
             keyid=self._private_key.id,
             passphrase=self._private_key.passphrase,
-            output=str(signature_path),
-            detach=detach,
+            detach=detach
         )
 
         if result.returncode != 0:
             log.error('Failed to create signature', file=str(release_path), signature=str(signature_path))
             raise GpgException('Failed to create signature', result)
         else:
+            self._create_file(distribution, signature_path, result.data)
             log.debug('Created signature', file=str(signature_path))
 
         self._verify_signature(release_path, signature_path, detached=detach)
+
+    def _create_file(self, distribution: str, file_path: Path, content: bytes) -> None:
+        self._cache.store(distribution, file_path, content)
+
+        with open(file_path, 'wb') as file:
+            file.write(content)
 
     def _verify_signature(self, release_path: Path, signature_path: Path, detached: bool) -> None:
         with open(signature_path, 'rb') as signature_file:

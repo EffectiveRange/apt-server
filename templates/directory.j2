@@ -3,28 +3,94 @@
 <head>
     <title>Index of /{{ path }}</title>
     <style>
-        body { font-family: sans-serif; }
-        table { width: 100%; border-collapse: collapse; }
+        body {
+            font-family: sans-serif;
+        }
 
-        th, td { text-align: left; padding: 4px 8px; }
-        th.name, td.name { width: 50%; }
-        th.date, td.date { width: 25%; white-space: nowrap; }
-        th.size, td.size { width: 25%; text-align: right; white-space: nowrap; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        th { border-bottom: 1px solid #ccc; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
 
-        a { text-decoration: none; color: black; }
-        a:visited { color: black; }
-        a:hover { text-decoration: underline; color: blue; }
+        th, td {
+            text-align: left;
+            padding: 4px 8px;
+        }
+
+        th.name, td.name {
+            width: 50%;
+        }
+
+        th.date, td.date {
+            width: 25%;
+            white-space: nowrap;
+        }
+
+        th.size, td.size {
+            width: 25%;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        th {
+            border-bottom: 1px solid #ccc;
+        }
+
+        th:hover {
+            cursor: pointer;
+            color: dodgerblue;
+        }
+
+        a {
+            text-decoration: none;
+            color: black;
+        }
+
+        a:visited {
+            color: black;
+        }
+
+        a:hover {
+            color: dodgerblue;
+        }
+
+        .breadcrumbs-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .breadcrumbs {
+            /* optional: keep left alignment */
+        }
+
+        .github-links {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .github-link {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 <h1>Index of /{{ path }}</h1>
-<div class="breadcrumbs">
-    <a href="/">root</a>/
-    {% for crumb in breadcrumbs %}
-    <a href="{{ crumb.href }}">{{ crumb.name }}</a>{% if not loop.last %}/{% endif %}
-    {% endfor %}
+<div class="breadcrumbs-bar">
+    <div class="breadcrumbs">
+        <a href="/">root</a>/
+        {% for crumb in breadcrumbs %}
+            <a href="{{ crumb.href }}">{{ crumb.name }}</a>{% if not loop.last %}/{% endif %}
+        {% endfor %}
+    </div>
+    <div class="github-links">
+        <a class="github-link" href="https://github.com/EffectiveRange/debian-package-repository">GitHub</a> 🚀
+        <a class="github-link" href="https://github.com/EffectiveRange/debian-package-repository/releases/tag/v{{ version }}">{{ version }}</a>
+    </div>
 </div>
 <table>
     <tr>
@@ -33,12 +99,12 @@
         <th onclick="sort('size')">Size {% if sort_by == 'size' %}{{ '↓' if reverse else '↑' }}{% endif %}</th>
     </tr>
     {% for item in items %}
-    <tr>
-        <td class="name"><a href="{{ item.href }}">{% if item.is_parent %}↩️{% else %}
-            {% if item.is_dir %}📁{% else %}📄{% endif %}{% endif %} {{ item.name }}</a></td>
-        <td class="date">{{ item.date }}</td>
-        <td class="size">{{ item.size }}</td>
-    </tr>
+        <tr>
+            <td class="name"><a href="{{ item.href }}">{% if item.is_parent %}↩️{% else %}
+                {% if item.is_dir %}📁{% else %}📄{% endif %}{% endif %} {{ item.name }}</a></td>
+            <td class="date">{{ item.date }}</td>
+            <td class="size">{{ item.size }}</td>
+        </tr>
     {% endfor %}
 </table>
 <script>

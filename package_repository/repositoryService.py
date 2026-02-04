@@ -34,6 +34,7 @@ class DefaultRepositoryService(RepositoryService):
     def start(self) -> None:
         log.info('Initializing repository')
 
+        self._cache.initialize()
         self._creator.initialize()
         self._signer.initialize()
 
@@ -74,7 +75,6 @@ class DefaultRepositoryService(RepositoryService):
 
     def _update_repository(self, distribution: str) -> None:
         log.info('Updating repository for distribution', distribution=distribution)
-        self._cache.lock(distribution)
         self._creator.create(distribution)
         self._signer.sign(distribution)
-        self._cache.clear(distribution)
+        self._cache.switch(distribution)

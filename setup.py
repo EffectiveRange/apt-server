@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='debian-package-repository',
-    description='Debian package repository server to serve .deb packages over HTTP',
+    description='APT repository with dynamic package pool handling',
     author='Ferenc Nandor Janky & Attila Gombos',
     author_email='info@effective-range.com',
     packages=find_packages(exclude=['tests']),

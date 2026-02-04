@@ -7,7 +7,7 @@ from common_utility import delete_directory, create_file, render_template_file
 from context_logger import setup_logging
 from gnupg import GPG, Sign, Verify, ImportResult
 
-from package_repository import DefaultRepositorySigner, GpgException, PublicGpgKey, PrivateGpgKey
+from package_repository import DefaultRepositorySigner, GpgException, PublicGpgKey, PrivateGpgKey, RepositoryCache
 from tests import TEST_RESOURCE_ROOT, REPOSITORY_DIR, APPLICATION_NAME, RELEASE_TEMPLATE_PATH
 
 RELEASE_DIR = f'{REPOSITORY_DIR}/dists/trixie'
@@ -31,9 +31,9 @@ class RepositorySignerTest(TestCase):
 
     def test_initialize_when_key_already_present(self):
         # Given
-        gpg, private_key, public_key = create_components()
+        cache, gpg, private_key, public_key = create_components()
         gpg.list_keys.return_value = [{'fingerprint': 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'}, {'fingerprint': KEY_ID}]
-        signer = DefaultRepositorySigner(gpg, private_key, public_key, REPOSITORY_DIR)
+        signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
 
         # When
         signer.initialize()
@@ -46,8 +46,8 @@ class RepositorySignerTest(TestCase):
 
     def test_initialize_when_key_is_imported(self):
         # Given
-        gpg, private_key, public_key = create_components()
-        signer = DefaultRepositorySigner(gpg, private_key, public_key, REPOSITORY_DIR)
+        cache, gpg, private_key, public_key = create_components()
+        signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
 
         # When
         signer.initialize()
@@ -60,8 +60,8 @@ class RepositorySignerTest(TestCase):
 
     def test_initialize_when_fails_to_import_key(self):
         # Given
-        gpg, private_key, public_key = create_components(import_code=1)
-        signer = DefaultRepositorySigner(gpg, private_key, public_key, REPOSITORY_DIR)
+        cache, gpg, private_key, public_key = create_components(import_code=1)
+        signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
 
         # When
         self.assertRaises(GpgException, signer.initialize)
@@ -72,8 +72,8 @@ class RepositorySignerTest(TestCase):
 
     def test_sign(self):
         # Given
-        gpg, private_key, public_key = create_components()
-        signer = DefaultRepositorySigner(gpg, private_key, public_key, REPOSITORY_DIR)
+        cache, gpg, private_key, public_key = create_components()
+        signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
 
         # When
         signer.sign('trixie')
@@ -85,14 +85,12 @@ class RepositorySignerTest(TestCase):
                     f'{RELEASE_DIR}/Release',
                     keyid=KEY_ID,
                     passphrase=PASSPHRASE,
-                    output=f'{RELEASE_DIR}/InRelease',
                     detach=False,
                 ),
                 mock.call(
                     f'{RELEASE_DIR}/Release',
                     keyid=KEY_ID,
                     passphrase=PASSPHRASE,
-                    output=f'{RELEASE_DIR}/Release.gpg',
                     detach=True,
                 ),
             ]
@@ -101,8 +99,8 @@ class RepositorySignerTest(TestCase):
 
     def test_sign_when_fails_to_create_signature(self):
         # Given
-        gpg, private_key, public_key = create_components(sign_codes=[1, 0])
-        signer = DefaultRepositorySigner(gpg, private_key, public_key, REPOSITORY_DIR)
+        cache, gpg, private_key, public_key = create_components(sign_codes=[1, 0])
+        signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
 
         # When
         self.assertRaises(GpgException, signer.sign, 'trixie')
@@ -113,8 +111,8 @@ class RepositorySignerTest(TestCase):
 
     def test_sign_when_fails_to_verify_signature(self):
         # Given
-        gpg, private_key, public_key = create_components(verify_codes=[1, 0])
-        signer = DefaultRepositorySigner(gpg, private_key, public_key, REPOSITORY_DIR)
+        cache, gpg, private_key, public_key = create_components(verify_codes=[1, 0])
+        signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
 
         # When
         self.assertRaises(GpgException, signer.sign, 'trixie')
@@ -125,8 +123,8 @@ class RepositorySignerTest(TestCase):
 
     def test_sign_when_fails_to_create_detached_signature(self):
         # Given
-        gpg, private_key, public_key = create_components(sign_codes=[0, 1])
-        signer = DefaultRepositorySigner(gpg, private_key, public_key, REPOSITORY_DIR)
+        cache, gpg, private_key, public_key = create_components(sign_codes=[0, 1])
+        signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
 
         # When
         self.assertRaises(GpgException, signer.sign, 'trixie')
@@ -137,8 +135,8 @@ class RepositorySignerTest(TestCase):
 
     def test_sign_when_failed_to_verify_detached_signature(self):
         # Given
-        gpg, private_key, public_key = create_components(verify_codes=[0, 1])
-        signer = DefaultRepositorySigner(gpg, private_key, public_key, REPOSITORY_DIR)
+        cache, gpg, private_key, public_key = create_components(verify_codes=[0, 1])
+        signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
 
         # When
         self.assertRaises(GpgException, signer.sign, 'trixie')
@@ -149,6 +147,8 @@ class RepositorySignerTest(TestCase):
 
 
 def create_components(import_code=0, sign_codes=None, verify_codes=None):
+    cache = MagicMock(spec=RepositoryCache)
+
     gpg = MagicMock(spec=GPG)
     gpg.list_keys.return_value = [{'fingerprint': 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'}]
 
@@ -162,9 +162,11 @@ def create_components(import_code=0, sign_codes=None, verify_codes=None):
     sign_result1 = Sign(gpg)
     sign_result1.returncode = sign_codes[0]
     sign_result1.status = 'signed'
+    sign_result1.data = b'Signed data 1'
     sign_result2 = Sign(gpg)
     sign_result2.returncode = sign_codes[1]
     sign_result2.status = 'signed'
+    sign_result2.data = b'Signed data 2'
     gpg.sign_file.side_effect = [sign_result1, sign_result2]
 
     if verify_codes is None:
@@ -180,7 +182,7 @@ def create_components(import_code=0, sign_codes=None, verify_codes=None):
     private_key = PrivateGpgKey(KEY_ID, Path(PRIVATE_KEY_PATH), PASSPHRASE)
     public_key = PublicGpgKey(KEY_ID, Path(PUBLIC_KEY_PATH), PUBLIC_KEY_NAME)
 
-    return gpg, private_key, public_key
+    return cache, gpg, private_key, public_key
 
 
 def create_files():

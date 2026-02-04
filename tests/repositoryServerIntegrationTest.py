@@ -31,7 +31,7 @@ COMPONENTS = {'main'}
 ARCHITECTURES = {'amd64', 'arm64'}
 
 
-class AptServerIntegrationTest(TestCase):
+class RepositoryServerIntegrationTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -162,13 +162,13 @@ class AptServerIntegrationTest(TestCase):
 def create_components():
     file_observer = Observer()
     package_watcher = DefaultPackageWatcher(file_observer, PACKAGE_DIR)
+    repository_cache = DefaultRepositoryCache({'bookworm', 'trixie'})
     repository_config = RepositoryConfig(APPLICATION_NAME, APP_VERSION, DISTRIBUTIONS, COMPONENTS, ARCHITECTURES,
                                          REPOSITORY_DIR, PACKAGE_DIR, RELEASE_TEMPLATE_PATH)
-    repository_creator = DefaultRepositoryCreator(repository_config)
+    repository_creator = DefaultRepositoryCreator(repository_cache, repository_config)
     private_key = PrivateGpgKey(KEY_ID, PRIVATE_KEY_PATH, PASSPHRASE)
     public_key = PublicGpgKey(KEY_ID, PUBLIC_KEY_PATH, PUBLIC_KEY_NAME)
-    repository_signer = DefaultRepositorySigner(GPG(), private_key, public_key, REPOSITORY_DIR)
-    repository_cache = DefaultRepositoryCache()
+    repository_signer = DefaultRepositorySigner(repository_cache, GPG(), private_key, public_key, REPOSITORY_DIR)
     repository_service = DefaultRepositoryService(package_watcher, repository_creator, repository_signer,
                                                   repository_cache, DISTRIBUTIONS, 0.1)
 

@@ -28,14 +28,14 @@ class RepositoryServiceTest(TestCase):
         service.start()
 
         # Then
+        cache.initialize.assert_called_once()
+        cache.switch.assert_has_calls([call('bookworm'), call('trixie')], any_order=True)
         creator.initialize.assert_called_once()
         creator.create.assert_has_calls([call('bookworm'), call('trixie')], any_order=True)
         signer.initialize.assert_called_once()
         signer.sign.assert_has_calls([call('bookworm'), call('trixie')], any_order=True)
         watcher.register.assert_called_once_with(service._handle_event)
         watcher.start.assert_called_once()
-        cache.lock.assert_has_calls([call('bookworm'), call('trixie')], any_order=True)
-        cache.clear.assert_has_calls([call('bookworm'), call('trixie')], any_order=True)
 
     def test_stop(self):
         # Given
@@ -58,10 +58,9 @@ class RepositoryServiceTest(TestCase):
         service._handle_event('trixie')
 
         # Then
-        wait_for_assertion(1, lambda: cache.lock.assert_called_once_with('trixie'))
+        wait_for_assertion(1, lambda: cache.switch.assert_called_once_with('trixie'))
         creator.create.assert_called_once_with('trixie')
         signer.sign.assert_called_once_with('trixie')
-        cache.clear.assert_called_once_with('trixie')
 
     def test_event_handled_when_another_event_is_handled(self):
         # Given
@@ -74,10 +73,9 @@ class RepositoryServiceTest(TestCase):
         service._handle_event('trixie')
 
         # Then
-        wait_for_assertion(1, lambda: cache.lock.assert_called_once_with('trixie'))
+        wait_for_assertion(1, lambda: cache.switch.assert_called_once_with('trixie'))
         creator.create.assert_called_once_with('trixie')
         signer.sign.assert_called_once_with('trixie')
-        cache.clear.assert_called_once_with('trixie')
 
     def test_event_not_handled_when_unsupported(self):
         # Given
@@ -90,8 +88,7 @@ class RepositoryServiceTest(TestCase):
         # Then
         creator.create.assert_not_called()
         signer.sign.assert_not_called()
-        cache.lock.assert_not_called()
-        cache.clear.assert_not_called()
+        cache.switch.assert_not_called()
 
 
 def create_components():

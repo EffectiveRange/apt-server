@@ -3,7 +3,7 @@
 
 # debian-package-repository
 
-APT server with dynamic package pool handling. Dynamic behavior is achieved by listening file changes in package pool
+APT repository with dynamic package pool handling. Dynamic behavior is achieved by listening file changes in package pool
 directory and on any .deb file change, the repository is updated and re-signed.
 
 ## Table of contents

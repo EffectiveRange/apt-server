@@ -15,6 +15,8 @@ from typing import Tuple
 from common_utility import create_directory, render_template_file
 from context_logger import get_logger
 
+from package_repository import RepositoryCache
+
 log = get_logger('RepositoryCreator')
 
 
@@ -41,9 +43,10 @@ class RepositoryCreator:
 
 class DefaultRepositoryCreator(RepositoryCreator):
 
-    def __init__(self, config: RepositoryConfig) -> None:
-        self._architectures = sorted({'all'} | config.architectures)
+    def __init__(self, cache: RepositoryCache, config: RepositoryConfig) -> None:
+        self._cache = cache
         self._config = config
+        self._architectures = sorted({'all'} | config.architectures)
 
     def initialize(self) -> None:
         self._create_repository_dir()
@@ -102,34 +105,35 @@ class DefaultRepositoryCreator(RepositoryCreator):
 
             create_directory(package_dir)
 
-            for arch in self._architectures:
-                arch_dir = target_dir / f'binary-{arch}'
+            for architecture in self._architectures:
+                arch_dir = target_dir / f'binary-{architecture}'
 
                 create_directory(arch_dir)
 
-                packages_file = arch_dir / 'Packages'
+                command = ['dpkg-scanpackages', '--multiversion', '--arch', architecture, str(package_dir)]
+                result = subprocess.run(command, capture_output=True, check=True)
 
-                with open(packages_file, 'w') as file:
-                    subprocess.call(
-                        ['dpkg-scanpackages', '--multiversion', '--arch', arch, package_dir], stdout=file
-                    )
+                packages_content = result.stdout
 
-                packages_files.append(packages_file)
+                packages_path = arch_dir / 'Packages'
 
-                log.info('Generated Packages file', distribution=distribution, architecture=arch,
-                         file=str(packages_file))
+                self._create_file(distribution, packages_path, packages_content)
 
-                compressed_file = Path(f'{packages_file}.gz')
+                log.info('Generated Packages file', file=str(packages_path),
+                         distribution=distribution, component=component, architecture=architecture)
 
-                with open(packages_file, 'rb') as file_in, gzip.open(compressed_file, 'wb') as file_out:
-                    file_out.writelines(file_in)
+                packages_files.append(packages_path)
 
-                packages_files.append(compressed_file)
+                compressed_path = Path(f'{packages_path}.gz')
+
+                self._create_file(distribution, compressed_path, packages_content, compressed=True)
+
+                packages_files.append(compressed_path)
 
         return packages_files
 
     def _generate_release_file(self, distribution: str, packages_files: list[Path]) -> None:
-        dist_path = f'{self._config.repository_dir}/dists/{distribution}'
+        dist_path = self._config.repository_dir / 'dists' / distribution
 
         md5_checksums = []
         sha1_checksums = []
@@ -138,7 +142,7 @@ class DefaultRepositoryCreator(RepositoryCreator):
         for packages_file in packages_files:
             md5, sha1, sha256 = self._generate_checksums(packages_file)
             file_size = os.stat(packages_file).st_size
-            file_path = str(packages_file)[len(dist_path) + 1:]
+            file_path = str(packages_file)[len(str(dist_path)) + 1:]
             md5_checksums.append(f' {md5} {file_size} {file_path}')
             sha1_checksums.append(f' {sha1} {file_size} {file_path}')
             sha256_checksums.append(f' {sha256} {file_size} {file_path}')
@@ -146,23 +150,29 @@ class DefaultRepositoryCreator(RepositoryCreator):
         context = {
             'origin': self._config.application_name,
             'label': self._config.application_name,
-            'codename': distribution,
             'version': self._config.application_version,
-            'architectures': ' '.join(self._architectures),
+            'codename': distribution,
             'date': datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S UTC"),
+            'architectures': ' '.join(self._architectures),
+            'components': ' '.join(self._config.components),
             'md5_checksums': '\n'.join(md5_checksums),
             'sha1_checksums': '\n'.join(sha1_checksums),
             'sha256_checksums': '\n'.join(sha256_checksums),
         }
 
-        rendered_content = render_template_file(self._config.release_template, context)
+        rendered_content = render_template_file(self._config.release_template, context).encode('utf-8')
 
-        release_path = f'{dist_path}/Release'
+        release_path = dist_path / 'Release'
 
-        with open(release_path, 'w') as release_file:
-            release_file.write(rendered_content)
+        self._create_file(distribution, release_path, rendered_content)
 
-        log.info('Generated Release file', distribution=distribution, file=str(release_path))
+        log.info('Generated Release file', file=str(release_path), distribution=distribution)
+
+    def _create_file(self, distribution: str, file_path: Path, content: bytes, compressed: bool = False) -> None:
+        self._cache.store(distribution, file_path, content)
+
+        with (gzip.open(file_path, 'wb') if compressed else open(file_path, 'wb')) as file:
+            file.write(content)
 
     def _generate_checksums(self, file_path: Path) -> Tuple[str, str, str]:
         md5_hashes = hashlib.md5()

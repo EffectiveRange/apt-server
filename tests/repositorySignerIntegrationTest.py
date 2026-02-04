@@ -9,7 +9,7 @@ from context_logger import setup_logging
 from gnupg import GPG
 
 from package_repository import RepositoryConfig, DefaultRepositoryCreator, DefaultRepositorySigner, PrivateGpgKey, \
-    PublicGpgKey
+    PublicGpgKey, DefaultRepositoryCache
 from tests import create_test_packages, TEST_RESOURCE_ROOT, REPOSITORY_DIR, APPLICATION_NAME, \
     PACKAGE_DIR, RELEASE_TEMPLATE_PATH
 
@@ -33,9 +33,9 @@ class RepositorySignerIntegrationTest(TestCase):
 
     def test_release_file_signed(self):
         # Given
-        config, gpg, private_key, public_key = create_components()
-        creator = DefaultRepositoryCreator(config)
-        signer = DefaultRepositorySigner(gpg, private_key, public_key, REPOSITORY_DIR)
+        cache, config, gpg, private_key, public_key = create_components()
+        creator = DefaultRepositoryCreator(cache, config)
+        signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
 
         creator.initialize()
         signer.initialize()
@@ -66,9 +66,9 @@ class RepositorySignerIntegrationTest(TestCase):
 
     def test_release_file_resigned(self):
         # Given
-        config, gpg, private_key, public_key = create_components()
-        creator = DefaultRepositoryCreator(config)
-        signer = DefaultRepositorySigner(gpg, private_key, public_key, REPOSITORY_DIR)
+        cache, config, gpg, private_key, public_key = create_components()
+        creator = DefaultRepositoryCreator(cache, config)
+        signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
 
         creator.initialize()
         signer.initialize()
@@ -92,13 +92,15 @@ class RepositorySignerIntegrationTest(TestCase):
 
 
 def create_components():
-    config = RepositoryConfig(APPLICATION_NAME, '1.0.0', {'bookworm', 'trixie'}, {'main'}, {'amd64', 'arm64'},
+    distributions = {'bookworm', 'trixie'}
+    cache = DefaultRepositoryCache(distributions)
+    config = RepositoryConfig(APPLICATION_NAME, '1.0.0', distributions, {'main'}, {'amd64', 'arm64'},
                               REPOSITORY_DIR, PACKAGE_DIR, RELEASE_TEMPLATE_PATH)
     gpg = GPG()
     private_key = PrivateGpgKey(KEY_ID, PRIVATE_KEY_PATH, PASSPHRASE)
     public_key = PublicGpgKey(KEY_ID, PUBLIC_KEY_PATH, PUBLIC_KEY_NAME)
 
-    return config, gpg, private_key, public_key
+    return cache, config, gpg, private_key, public_key
 
 
 if __name__ == "__main__":
