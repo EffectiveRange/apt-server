@@ -110,7 +110,7 @@ class DirectoryServiceTest(TestCase):
     def test_returns_200_when_accessing_non_cached_text_file(self):
         # Given
         web_server, cache, config = create_components()
-        file_path = REPOSITORY_DIR / 'dists/trixie/info.txt'
+        file_path = REPOSITORY_DIR / 'dists/trixie/info'
         file_content = 'This is a test file.'
         create_file(file_path, file_content)
 
@@ -123,10 +123,11 @@ class DirectoryServiceTest(TestCase):
             client = web_server._app.test_client()
 
             # When
-            response = client.get('/dists/trixie/info.txt')
+            response = client.get('/dists/trixie/info')
 
             # Then
             self.assertEqual(200, response.status_code)
+            self.assertEqual('text/plain; charset=utf-8', response.content_type)
             self.assertEqual(file_content.encode(), response.data)
 
     def test_returns_200_when_accessing_cached_text_file(self):
@@ -151,6 +152,7 @@ class DirectoryServiceTest(TestCase):
 
             # Then
             self.assertEqual(200, response.status_code)
+            self.assertEqual('text/plain; charset=utf-8', response.content_type)
             self.assertEqual(file_content.encode(), response.data)
 
     def test_returns_200_when_accessing_non_cached_binary_file(self):
@@ -176,6 +178,8 @@ class DirectoryServiceTest(TestCase):
 
             # Then
             self.assertEqual(200, response.status_code)
+            self.assertEqual('gzip', response.headers['Content-Encoding'])
+            self.assertEqual('attachment; filename="info.gz"', response.headers['Content-Disposition'])
             with open(compressed_path, 'rb') as compressed_file:
                 self.assertEqual(compressed_file.read(), response.data)
 
@@ -204,6 +208,8 @@ class DirectoryServiceTest(TestCase):
 
             # Then
             self.assertEqual(200, response.status_code)
+            self.assertEqual('gzip', response.headers['Content-Encoding'])
+            self.assertEqual('attachment; filename="info.gz"', response.headers['Content-Disposition'])
             with open(compressed_path, 'rb') as compressed_file:
                 self.assertEqual(compressed_file.read(), response.data)
 

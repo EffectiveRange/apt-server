@@ -22,7 +22,7 @@ from package_repository import DefaultRepositoryServer, RepositoryConfig, Defaul
 
 APPLICATION_NAME = 'debian-package-repository'
 
-log = get_logger('DebianPackageRepositoryApp')
+log = get_logger('PackageRepositoryApp')
 
 
 def main() -> None:

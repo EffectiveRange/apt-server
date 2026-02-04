@@ -108,7 +108,7 @@ server_port = 9000
 [repository]
 architectures = amd64, arm64, armhf
 distributions = bullseye, bookworm
-repository_dir = /etc/apt-repo
+repository_dir = /etc/effective-range/debian-package-repository
 deb_package_dir = /opt/debs
 release_template = templates/Release.j2
 

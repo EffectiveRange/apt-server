@@ -96,7 +96,15 @@ class DefaultDirectoryService(DirectoryService):
 
         mimetype, encoding = mimetypes.guess_type(full_path)
 
-        return Response(content, mimetype=mimetype, headers={'Content-Encoding': encoding} if encoding else {})
+        headers = {}
+
+        if encoding:
+            headers['Content-Encoding'] = encoding
+            headers['Content-Disposition'] = f'attachment; filename="{full_path.name}"'
+        elif not mimetype:
+            mimetype = 'text/plain'
+
+        return Response(content, mimetype=mimetype, headers=headers)
 
     def _authorize(self, full_path: Path) -> bool:
         if any(full_path.is_relative_to(private_dir) for private_dir in self._config.private_dirs):
