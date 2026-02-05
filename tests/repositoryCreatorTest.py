@@ -1,3 +1,4 @@
+import gzip
 import os
 import unittest
 from unittest import TestCase
@@ -66,6 +67,7 @@ class RepositoryCreatorTest(TestCase):
 
         cache, config = create_components()
         creator = DefaultRepositoryCreator(cache, config)
+        creator.initialize()
 
         # When
         creator.create('trixie')
@@ -87,6 +89,11 @@ class RepositoryCreatorTest(TestCase):
 
         self.assertTrue(all_matches)
 
+        with gzip.open(f'{REPOSITORY_DIR}/dists/trixie/main/binary-amd64/Packages.gz', 'rt') as gz_file:
+            gz_packages = gz_file.read().splitlines()
+            all_matches_gz = compare_lines(packages, gz_packages)
+            self.assertTrue(all_matches_gz)
+
     def test_create_assert_release_file_generated(self):
         # Given
         expected_release = render_template_file(
@@ -106,6 +113,7 @@ class RepositoryCreatorTest(TestCase):
 
         cache, config = create_components()
         creator = DefaultRepositoryCreator(cache, config)
+        creator.initialize()
 
         # When
         creator.create('trixie')

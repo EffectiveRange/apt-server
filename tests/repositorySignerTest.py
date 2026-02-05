@@ -74,6 +74,7 @@ class RepositorySignerTest(TestCase):
         # Given
         cache, gpg, private_key, public_key = create_components()
         signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
+        signer.initialize()
 
         # When
         signer.sign('trixie')
@@ -101,6 +102,7 @@ class RepositorySignerTest(TestCase):
         # Given
         cache, gpg, private_key, public_key = create_components(sign_codes=[1, 0])
         signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
+        signer.initialize()
 
         # When
         self.assertRaises(GpgException, signer.sign, 'trixie')
@@ -113,6 +115,7 @@ class RepositorySignerTest(TestCase):
         # Given
         cache, gpg, private_key, public_key = create_components(verify_codes=[1, 0])
         signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
+        signer.initialize()
 
         # When
         self.assertRaises(GpgException, signer.sign, 'trixie')
@@ -125,6 +128,7 @@ class RepositorySignerTest(TestCase):
         # Given
         cache, gpg, private_key, public_key = create_components(sign_codes=[0, 1])
         signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
+        signer.initialize()
 
         # When
         self.assertRaises(GpgException, signer.sign, 'trixie')
@@ -137,6 +141,7 @@ class RepositorySignerTest(TestCase):
         # Given
         cache, gpg, private_key, public_key = create_components(verify_codes=[0, 1])
         signer = DefaultRepositorySigner(cache, gpg, private_key, public_key, REPOSITORY_DIR)
+        signer.initialize()
 
         # When
         self.assertRaises(GpgException, signer.sign, 'trixie')

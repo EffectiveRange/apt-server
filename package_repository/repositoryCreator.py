@@ -9,6 +9,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from io import BytesIO
 from pathlib import Path
 from typing import Tuple
 
@@ -168,9 +169,15 @@ class DefaultRepositoryCreator(RepositoryCreator):
         log.info('Generated Release file', file=str(release_path), distribution=distribution)
 
     def _create_file(self, distribution: str, file_path: Path, content: bytes, compressed: bool = False) -> None:
+        if compressed:
+            buffer = BytesIO()
+            with gzip.GzipFile(fileobj=buffer, mode='wb') as compressed_file:
+                compressed_file.write(content)
+            content = buffer.getvalue()
+
         self._cache.store(distribution, file_path, content)
 
-        with (gzip.open(file_path, 'wb') if compressed else open(file_path, 'wb')) as file:
+        with open(file_path, 'wb') as file:
             file.write(content)
 
     def _generate_checksums(self, file_path: Path) -> Tuple[str, str, str]:
