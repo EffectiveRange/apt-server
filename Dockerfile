@@ -1,7 +1,7 @@
 FROM debian:trixie-slim
 
 RUN apt update && apt upgrade -y
-RUN apt install -y python3-venv python3-pip git
+RUN apt install -y python3-venv python3-pip git gnupg
 
 # Install debian-package-repository
 COPY dist/*.whl /tmp/debian-package-repository/
