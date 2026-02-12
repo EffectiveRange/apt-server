@@ -1,4 +1,5 @@
 import unittest
+from concurrent.futures import ThreadPoolExecutor, Future
 from importlib.metadata import version
 from pathlib import Path
 from threading import Thread
@@ -13,7 +14,7 @@ from watchdog.observers import Observer
 
 from package_repository import DefaultDirectoryService, DefaultRepositoryService, DirectoryConfig, \
     DefaultDirectoryServer, ServerConfig, DefaultRepositoryCache, DefaultRepositorySigner, DefaultRepositoryCreator, \
-    RepositoryConfig, DefaultPackageWatcher, PublicGpgKey, PrivateGpgKey, DefaultRepositoryServer
+    RepositoryConfig, DefaultPackageWatcher, PublicGpgKey, PrivateGpgKey, DefaultRepositoryServer, ReleaseInfo
 from tests import create_test_packages, TEST_RESOURCE_ROOT, RESOURCE_ROOT, REPOSITORY_DIR, APPLICATION_NAME, \
     PACKAGE_DIR, RELEASE_TEMPLATE_PATH
 
@@ -131,8 +132,9 @@ class RepositoryServerIntegrationTest(TestCase):
             Thread(target=repository_server.run).start()
             wait_for_condition(3, lambda: directory_server.is_running())
             request_count = 100
+            executor = ThreadPoolExecutor(max_workers=request_count)
             timeout = 1
-            threads = []
+            futures: list[Future] = []
             responses = []
 
             def send_request():
@@ -145,13 +147,12 @@ class RepositoryServerIntegrationTest(TestCase):
 
             # When
             for index in range(request_count):
-                thread = Thread(target=lambda: send_request())
-                threads.append(thread)
-                thread.start()
+                future = executor.submit(send_request)
+                futures.append(future)
 
             # Then
-            for thread in threads:
-                thread.join()
+            for future in futures:
+                future.result(timeout)
             self.assertEqual(request_count, len(responses))
             for response in responses:
                 self.assertEqual(200, response.status_code)
@@ -163,9 +164,10 @@ def create_components():
     file_observer = Observer()
     package_watcher = DefaultPackageWatcher(file_observer, PACKAGE_DIR)
     repository_cache = DefaultRepositoryCache({'bookworm', 'trixie'})
-    repository_config = RepositoryConfig(APPLICATION_NAME, APP_VERSION, DISTRIBUTIONS, COMPONENTS, ARCHITECTURES,
-                                         REPOSITORY_DIR, PACKAGE_DIR, RELEASE_TEMPLATE_PATH)
-    repository_creator = DefaultRepositoryCreator(repository_cache, repository_config)
+    repository_config = RepositoryConfig(DISTRIBUTIONS, COMPONENTS, ARCHITECTURES, REPOSITORY_DIR, PACKAGE_DIR)
+    release_info = ReleaseInfo(RELEASE_TEMPLATE_PATH, APPLICATION_NAME, APPLICATION_NAME,
+                               'stable', APP_VERSION, 'Test repository')
+    repository_creator = DefaultRepositoryCreator(repository_cache, repository_config, release_info)
     private_key = PrivateGpgKey(KEY_ID, PRIVATE_KEY_PATH, PASSPHRASE)
     public_key = PublicGpgKey(KEY_ID, PUBLIC_KEY_PATH, PUBLIC_KEY_NAME)
     repository_signer = DefaultRepositorySigner(repository_cache, GPG(), private_key, public_key, REPOSITORY_DIR)

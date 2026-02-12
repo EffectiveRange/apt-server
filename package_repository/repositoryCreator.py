@@ -23,14 +23,21 @@ log = get_logger('RepositoryCreator')
 
 @dataclass
 class RepositoryConfig:
-    application_name: str
-    application_version: str
     distributions: set[str]
     components: set[str]
     architectures: set[str]
     repository_dir: Path
     deb_package_dir: Path
-    release_template: Path
+
+
+@dataclass
+class ReleaseInfo:
+    template: Path
+    origin: str
+    label: str
+    suite: str
+    version: str
+    description: str
 
 
 class RepositoryCreator:
@@ -44,9 +51,10 @@ class RepositoryCreator:
 
 class DefaultRepositoryCreator(RepositoryCreator):
 
-    def __init__(self, cache: RepositoryCache, config: RepositoryConfig) -> None:
+    def __init__(self, cache: RepositoryCache, config: RepositoryConfig, info: ReleaseInfo) -> None:
         self._cache = cache
         self._config = config
+        self._info = info
         self._architectures = sorted({'all'} | config.architectures)
 
     def initialize(self) -> None:
@@ -148,9 +156,11 @@ class DefaultRepositoryCreator(RepositoryCreator):
             sha256_checksums.append(f' {sha256} {file_size} {file_path}')
 
         context = {
-            'origin': self._config.application_name,
-            'label': self._config.application_name,
-            'version': self._config.application_version,
+            'origin': self._info.origin,
+            'label': self._info.label,
+            'suite': self._info.suite,
+            'version': self._info.version,
+            'description': self._info.description,
             'codename': distribution,
             'date': datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S UTC"),
             'architectures': ' '.join(self._architectures),
@@ -160,7 +170,7 @@ class DefaultRepositoryCreator(RepositoryCreator):
             'sha256_checksums': '\n'.join(sha256_checksums),
         }
 
-        rendered_content = render_template_file(self._config.release_template, context).encode('utf-8')
+        rendered_content = render_template_file(self._info.template, context).encode('utf-8')
 
         release_path = dist_path / 'Release'
 
