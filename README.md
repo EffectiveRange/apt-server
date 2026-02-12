@@ -9,11 +9,11 @@
 | package\_repository/directoryService.py  |      103 |        0 |       26 |        1 |     99% |  129->132 |
 | package\_repository/packageWatcher.py    |       50 |        0 |        4 |        0 |    100% |           |
 | package\_repository/repositoryCache.py   |       34 |        0 |        8 |        0 |    100% |           |
-| package\_repository/repositoryCreator.py |      111 |        3 |       18 |        1 |     95% |     91-94 |
+| package\_repository/repositoryCreator.py |      114 |        3 |       18 |        1 |     95% |    99-102 |
 | package\_repository/repositoryServer.py  |       27 |        0 |        0 |        0 |    100% |           |
 | package\_repository/repositoryService.py |       49 |        0 |        8 |        0 |    100% |           |
 | package\_repository/repositorySigner.py  |      100 |        0 |       14 |        0 |    100% |           |
-| **TOTAL**                                |  **537** |    **6** |   **82** |    **4** | **98%** |           |
+| **TOTAL**                                |  **540** |    **6** |   **82** |    **4** | **98%** |           |
 
 
 ## Setup coverage badge
