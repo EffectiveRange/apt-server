@@ -18,7 +18,7 @@ from watchdog.observers import Observer
 
 from package_repository import DefaultRepositoryServer, RepositoryConfig, DefaultRepositoryService, \
     DefaultPackageWatcher, DefaultRepositoryCreator, DefaultRepositorySigner, DefaultRepositoryCache, DirectoryConfig, \
-    DefaultDirectoryService, DefaultDirectoryServer, ServerConfig, PublicGpgKey, PrivateGpgKey
+    DefaultDirectoryService, DefaultDirectoryServer, ServerConfig, PublicGpgKey, PrivateGpgKey, ReleaseInfo
 
 APPLICATION_NAME = 'debian-package-repository'
 
@@ -37,6 +37,8 @@ def main() -> None:
 
     log.info(f'Started {APPLICATION_NAME}')
 
+    version = _get_version(APPLICATION_NAME)
+
     server_host = config.get('server_host', '*')
     server_port = int(config.get('server_port', 9000))
     server_scheme = config.get('server_scheme', 'http')
@@ -52,7 +54,13 @@ def main() -> None:
     repository_dir = _get_absolute_path(config.get('repository_dir', f'/etc/{APPLICATION_NAME}'))
     deb_package_dir = _get_absolute_path(config.get('deb_package_dir', '/opt/debs'))
     repo_create_delay = float(config.get('repo_create_delay', 10))
+
     release_template = _get_absolute_path(config.get('release_template', 'templates/Release.j2'))
+    release_origin = config.get('release_origin', APPLICATION_NAME)
+    release_label = config.get('release_label', APPLICATION_NAME)
+    release_suite = config.get('release_suite', 'stable')
+    release_version = config.get('release_version', version)
+    release_description = config.get('release_description', 'A Debian package repository server')
 
     private_key_id = config.get('private_key_id', 'C1AEE2EDBAEC37595801DDFAE15BC62117A4E0F3')
     private_key_path = _get_absolute_path(config.get('private_key_path', 'tests/keys/private-key.asc'))
@@ -64,8 +72,6 @@ def main() -> None:
     directory_password = config.get('directory_password', 'admin')
     directory_template = _get_absolute_path(config.get('directory_template', 'templates/directory.j2'))
     directory_private_patterns = config.get('directory_private')
-
-    version = _get_version(APPLICATION_NAME)
 
     public_key = PublicGpgKey(private_key_id, public_key_path, public_key_name)
     private_key = PrivateGpgKey(private_key_id, private_key_path, private_key_pass)
@@ -79,9 +85,10 @@ def main() -> None:
     file_observer = Observer()
     package_watcher = DefaultPackageWatcher(file_observer, deb_package_dir)
     repository_cache = DefaultRepositoryCache(distributions)
-    repository_config = RepositoryConfig(APPLICATION_NAME, version, distributions, components, architectures,
-                                         repository_dir, deb_package_dir, release_template)
-    repository_creator = DefaultRepositoryCreator(repository_cache, repository_config)
+    repository_config = RepositoryConfig(distributions, components, architectures, repository_dir, deb_package_dir)
+    release_info = ReleaseInfo(release_template, release_origin, release_label, release_suite, release_version,
+                               release_description)
+    repository_creator = DefaultRepositoryCreator(repository_cache, repository_config, release_info)
     repository_signer = DefaultRepositorySigner(repository_cache, GPG(), private_key, public_key, repository_dir)
 
     repository_service = DefaultRepositoryService(package_watcher, repository_creator, repository_signer,
@@ -133,7 +140,13 @@ def _get_arguments() -> dict[str, Any]:
     parser.add_argument('--repository-dir', help='repository root directory')
     parser.add_argument('--deb-package-dir', help='directory containing the debian packages')
     parser.add_argument('--repo-create-delay', help='repository creation delay after package changes', type=float)
+
     parser.add_argument('--release-template', help='release template file to use')
+    parser.add_argument('--release-origin', help='repository release origin')
+    parser.add_argument('--release-label', help='repository release label')
+    parser.add_argument('--release-version', help='repository release version')
+    parser.add_argument('--release-suite', help='repository release suite')
+    parser.add_argument('--release-description', help='repository release description')
 
     parser.add_argument('--private-key-id', help='ID of keys used for signing and verifying the signature')
     parser.add_argument('--private-key-path', help='path of key used for signing')
